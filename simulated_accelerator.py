@@ -37,9 +37,9 @@ incoming_beam = ParticleBeam.from_twiss(
 sim_beamline = Segment(
     [
         Drift(length=torch.tensor(1.0)),
-        Quadrupole(name="QUAD:DIAG0:330:BACT", k1 = torch.tensor(1.0), length=torch.tensor(0.1)),
-        Quadrupole(name="QUAD:DIAG0:360:BACT", k1 = torch.tensor(1.0), length=torch.tensor(0.1)),
-        Quadrupole(name="QUAD:DIAG0:390:BACT", k1 = torch.tensor(1.0), length=torch.tensor(0.1)),
+        Quadrupole(name="QUAD:DIAG0:330", k1 = torch.tensor(1.0), length=torch.tensor(0.1)),
+        Quadrupole(name="QUAD:DIAG0:360", k1 = torch.tensor(1.0), length=torch.tensor(0.1)),
+        Quadrupole(name="QUAD:DIAG0:390", k1 = torch.tensor(1.0), length=torch.tensor(0.1)),
         Drift(length=torch.tensor(1.0))
     ]
 )
