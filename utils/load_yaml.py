@@ -12,8 +12,9 @@ def load_relevant_controls(yaml_file):
     for name, info in data.get('magnets', {}).items():
         if info['metadata']['type'] == 'QUAD':
             control_name = info['controls_information']['control_name']
-            relevant_controls[control_name] = info['controls_information']['PVs']
-            
+            relevant_controls[control_name] = {}
+            relevant_controls[control_name]['pvs'] = info['controls_information']['PVs']
+            relevant_controls[control_name]['metadata'] = info['metadata']
     
     # Process screens
     for name, info in data.get('screens', {}).items():
