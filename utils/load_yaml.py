@@ -20,8 +20,9 @@ def load_relevant_controls(yaml_file):
     for name, info in data.get('screens', {}).items():
         if info['metadata']['type'] == 'PROF':  # Assuming 'PROF' represents OTR
             control_name = info['controls_information']['control_name']
-            relevant_controls[control_name] = info['controls_information']['PVs']
-    
+            relevant_controls[control_name] = {}
+            relevant_controls[control_name]['pvs'] = info['controls_information']['PVs']
+            relevant_controls[control_name]['metadata'] = info['metadata']
     return relevant_controls
 
 # Example usage

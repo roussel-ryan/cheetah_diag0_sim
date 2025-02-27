@@ -5,11 +5,9 @@ import torch
 from utils.load_yaml import load_relevant_controls
 from utils.pvdb import create_pvdb
 from utils.beamline import create_beamline
-import pprint
+
 device_dict = load_relevant_controls('DL1.yaml')
-#pprint.pprint(device_dict)
-PVDB = create_pvdb(device_dict)
-pprint.pprint(PVDB)
+pvdb = create_pvdb(device_dict)
 sim_beamline = create_beamline(device_dict)
 
 twiss_params = {
@@ -26,6 +24,19 @@ twiss_params = {
 sim_cheetah_beam = ParticleBeam.from_twiss(**twiss_params)
 
 
+sim_beamline = Segment(
+    [
+        Drift(length=torch.tensor(1.0)),
+        Quadrupole(name="QUAD:IN20:425", k1 = torch.tensor(1.0), length=torch.tensor(0.1)),
+        Quadrupole(name="QUAD:IN20:511", k1 = torch.tensor(1.0), length=torch.tensor(0.1)),
+        Quadrupole(name="QUAD:IN20:571", k1 = torch.tensor(1.0), length=torch.tensor(0.1)),
+        Quadrupole(name="QUAD:IN20:631", k1 = torch.tensor(1.0), length=torch.tensor(0.1)),
+        Quadrupole(name="QUAD:IN20:651", k1 = torch.tensor(1.0), length=torch.tensor(0.1)),     
+        Quadrupole(name="QUAD:IN20:771", k1 = torch.tensor(1.0), length=torch.tensor(0.1)),     
+        Drift(length=torch.tensor(1.0)),
+        Screen(name='OTR02', pixel_size=torch.ones(2)*(10e-6), is_active=True)
+    ]
+)
 
 class CheetahBeamSimDriver(Driver):
     def __init__(self, particle_beam: ParticleBeam, beamline: Segment):
@@ -57,10 +68,6 @@ class CheetahBeamSimDriver(Driver):
             print(quad_name)
             self.set_quad_value(quad_name,value,self.sim_beamline)
             self.setParam(reason,value)
-        elif 'QUAD' in reason:
-            self.setParam(reason,value)
-        elif 'OTRS' in reason:
-            print(f'reason is {reason}')
     
     def get_quad_value(self, quad_name:str, value:float,  beamline: Segment):
         #TODO: think about edge case when quad isn't in beamline what do we return?
@@ -79,27 +86,35 @@ class CheetahBeamSimDriver(Driver):
             index_num = names.index(quad_name)
             beamline.elements[index_num].k1 = torch.tensor(quad_value)
 
-
-    def get_screen_distribution(self, screen_name:str, particle_beam: ParticleBeam, beamline:Segment )->list[float]:
-        #TODO: put some safety stuff in here
-        beamline.track(particle_beam)
-        names = [element.name for element in beamline.elements]
-        index_num = names.index(screen_name)
-        img = beamline.elements[index_num].reading
-        return img
-
 server = SimpleServer()
+PVDB = {
+    'QUAD:IN20:425:BACT': {'value': 3.0, 'prec': 5, 'hopr': 10, 'lopr': -10},
+    'QUAD:IN20:511:BACT': {'value': -4.0, 'prec': 5, 'hopr': 10, 'lopr': -10},
+    'QUAD:IN20:571:BACT': {'value': 8.0, 'prec': 5, 'hopr': 10, 'lopr': -10},
+    'QUAD:IN20:631:BACT': {'value': 8.0, 'prec': 5, 'hopr': 10, 'lopr': -10},
+    'QUAD:IN20:651:BACT': {'value': 8.0, 'prec': 5, 'hopr': 10, 'lopr': -10},
+    'QUAD:IN20:771:BACT': {'value': 8.0, 'prec': 5, 'hopr': 10, 'lopr': -10},
+    'OTRS:IN20:571:Image:ArrayData': {'type': 'float', 'count': 1392*1040},
+    'OTRS:IN20:571:Image:ArraySize1_RBV': {'value': 1392, 'prec': 5, 'scan': 0},
+    'OTRS:IN20:571:Image:ArraySize0_RBV': {'value': 1040, 'prec': 5, 'scan': 0},
+    'OTRS:IN20:571:Image:ArrayRate_RBV' : {'value': 4.0, 'prec':2, 'scan':0},
+    #'QUADSEGMENTVALUES': {'value': 8.0, 'prec': 5, 'hopr': 10, 'lopr': -10},
+}
 
 server.createPV('', PVDB)
 driver = CheetahBeamSimDriver(particle_beam=sim_cheetah_beam, beamline=sim_beamline)
-#
+
 print('Starting simulated server')
 while True:
     server.process(0.1)
 
-
-#TODO: test functionality for getting and setting quads, for getting and setting Image:Arrays
-#TODO: create framework for setting up beamline from device_dict, implement it for only one screen "OTR2"
-#TODO: after setup param handling to be more robust
-#TODO: more channels for reading/writing pvs
-#TODO: 
+    '''
+    def get_image_array(self, screen_name:str, particle_beam: ParticleBeam, beamline: Segment, nrows: int, ncols:int):
+        print(screen_name)
+        tracked_beam = beamline.track(particle_beam)
+        x_pos = tracked_beam.x.cpu().detach().numpy()
+        y_pos = tracked_beam.y.cpu().detach().numpy()
+        hist, x_edges, y_edges = np.histogram2d(x_pos, y_pos, bins=(nrows,ncols))
+        flat_hist = list(hist.flatten())
+        return flat_hist
+    '''
