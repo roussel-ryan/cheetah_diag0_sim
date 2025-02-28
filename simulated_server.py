@@ -6,26 +6,27 @@ from utils.load_yaml import load_relevant_controls
 from utils.pvdb import create_pvdb
 from utils.beamline import create_beamline
 import pprint
+import numpy as np
+import matplotlib.pyplot as plt
 device_dict = load_relevant_controls('DL1.yaml')
 #pprint.pprint(device_dict)
 PVDB = create_pvdb(device_dict)
-pprint.pprint(PVDB)
-sim_beamline = create_beamline(device_dict)
+#pprint.pprint(PVDB)
+sim_beamline = create_beamline(device_dict,screen_control_name='OTRS:IN20:571')
 
 twiss_params = {
 'energy' : torch.tensor(1e9),
-'emittance_x' : torch.tensor(5e-6),
-'emittance_y' : torch.tensor(5e-6),
-'beta_x' : torch.tensor(10.0),
+'emittance_x' : torch.tensor(5e-8),
+'emittance_y' : torch.tensor(5e-8),
+'beta_x' : torch.tensor(1.0),
 'alpha_x' : torch.tensor(0.0),
-'beta_y' : torch.tensor(10.0),
+'beta_y' : torch.tensor(1.0),
 'alpha_y' : torch.tensor(0.0),
 'total_charge': torch.tensor(1e-9)
 }
 
+
 sim_cheetah_beam = ParticleBeam.from_twiss(**twiss_params)
-
-
 
 class CheetahBeamSimDriver(Driver):
     def __init__(self, particle_beam: ParticleBeam, beamline: Segment):
@@ -34,25 +35,28 @@ class CheetahBeamSimDriver(Driver):
         self.sim_beam = particle_beam
         #TODO: beamline here
         self.sim_beamline = beamline
+        self.array_data = np.array([])
 
     def read(self,reason):
         if reason == 'OTRS:IN20:571:Image:ArrayData':
+            screen_name = reason.rsplit(':',2)[0]
             print(f'reason is {reason}')
-            value = self.getParam(reason)
-        elif 'QUAD' and 'BACT' in reason:
+            self.array_data = self.get_screen_distribution(screen_name,
+            particle_beam=self.sim_beam,beamline=self.sim_beamline)
+            print(self.array_data.shape)
+            value = list(self.array_data.flatten())
+        elif 'QUAD' and 'BCTRL' in reason:
             print(f'reason is {reason}')
             value = self.getParam(reason)
             quad_name = reason.rsplit(':',1)[0]
-
             self.get_quad_value(quad_name, value, self.sim_beamline)
         else:
             value = self.getParam(reason)
         return value
-        #TODO: read only images, self.beamline.track() ->hist 
         
     def write(self, reason, value):
         print(f'reason is {reason} with value: {value}')
-        if 'QUAD' and 'BACT' in reason:
+        if 'QUAD' and 'BCTRL' in reason:
             quad_name = reason.rsplit(':',1)[0]
             print(quad_name)
             self.set_quad_value(quad_name,value,self.sim_beamline)
@@ -88,8 +92,12 @@ class CheetahBeamSimDriver(Driver):
         img = beamline.elements[index_num].reading
         return img
 
-server = SimpleServer()
+    def plot_distribution(self):
+        print(self.array_data.shape)
+        plt.imshow(self.array_data)
+        plt.show()
 
+server = SimpleServer()
 server.createPV('', PVDB)
 driver = CheetahBeamSimDriver(particle_beam=sim_cheetah_beam, beamline=sim_beamline)
 #
@@ -101,5 +109,3 @@ while True:
 #TODO: test functionality for getting and setting quads, for getting and setting Image:Arrays
 #TODO: create framework for setting up beamline from device_dict, implement it for only one screen "OTR2"
 #TODO: after setup param handling to be more robust
-#TODO: more channels for reading/writing pvs
-#TODO: 

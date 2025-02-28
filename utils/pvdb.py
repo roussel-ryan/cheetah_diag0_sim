@@ -1,40 +1,3 @@
-'''
-def create_pvdb(device_dictionary:dict, **default_params) -> dict:
-    pvdb = {}
-    keys = [key for key in device_dictionary.keys()]
-    for key in keys:
-        if 'QUAD' in key:
-            quad_pvdb = { device_dictionary[key]['pvs']['bact'] : {'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20},
-                     device_dictionary[key]['pvs']['bctrl'] : {'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20},
-                     device_dictionary[key]['pvs']['bmax'] : {'value': 20.0, 'prec': 5, },
-                     device_dictionary[key]['pvs']['bmin'] : {'value': -20.0, 'prec': 5,},
-                     device_dictionary[key]['pvs']['bdes'] : {'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20},
-                     device_dictionary[key]['pvs']['bcon'] : {'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20},
-            }
-            pvdb.update(quad_pvdb)
-        elif 'OTRS' in key:
-            screen_pvdb = {device_dictionary[key]['pvs']['image']: {
-            'type': 'float',
-            'count': default_params.get('n_row', 600) * default_params.get('n_col', 800)
-        },
-            device_dictionary[key]['pvs']['n_row']: {
-            'type': 'int',
-            'value' : default_params.get('n_row', 600)
-        },
-            device_dictionary[key]['pvs']['n_col']: {
-            'type': 'int',
-            'value' : default_params.get('n_col', 800)
-        },
-        device_dictionary[key]['pvs']['resolution']: {
-            'value' : default_params.get('resolution', 12.5 )
-        },
-
-        
-        }
-            pvdb.update(screen_pvdb) 
-    return pvdb
-'''
-
 def create_pvdb(device_dictionary: dict, **default_params) -> dict:
     pvdb = {}
 
@@ -74,7 +37,3 @@ def create_pvdb(device_dictionary: dict, **default_params) -> dict:
             pvdb.update(screen_pvdb)
 
     return pvdb
-
-
-#TODO: note to self fix camera pvs
-#TODO: then test that server loads and can handle all these pvs
