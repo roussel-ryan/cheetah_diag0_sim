@@ -1,7 +1,8 @@
-def create_pvdb(device_dictionary: dict, **default_params) -> dict:
+def create_pvdb(device: dict, **default_params) -> dict:
+    #TODO: args is segme
     pvdb = {}
 
-    for key, device_info in device_dictionary.items():
+    for key, device_info in device.items():
         pvs = device_info.get('pvs', {})  # Safely get 'pvs' dictionary, default to empty dict
         
         if 'QUAD' in key:

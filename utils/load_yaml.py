@@ -10,7 +10,8 @@ def load_relevant_controls(yaml_file):
             control_name = info['controls_information']['control_name']
             relevant_controls[control_name] = {}
             relevant_controls[control_name]['pvs'] = info['controls_information']['PVs']
-            relevant_controls[control_name]['metadata'] = info['metadata']   
+            relevant_controls[control_name]['metadata'] = info['metadata']
+            relevant_controls[control_name]['madname'] = name  
     # Process screens
     for name, info in data.get('screens', {}).items():
         if info['metadata']['type'] == 'PROF':  # Assuming 'PROF' represents OTR
@@ -18,6 +19,7 @@ def load_relevant_controls(yaml_file):
             relevant_controls[control_name] = {}
             relevant_controls[control_name]['pvs'] = info['controls_information']['PVs']
             relevant_controls[control_name]['metadata'] = info['metadata']
+            relevant_controls[control_name]['madname'] = name
     return relevant_controls
 
 #TODO: multiarea

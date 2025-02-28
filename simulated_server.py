@@ -7,12 +7,13 @@ from utils.pvdb import create_pvdb
 from utils.beamline import create_beamline
 import pprint
 
-device_dict = load_relevant_controls('DL1.yaml')
-screen_name = 'OTRS:IN20:571'
-PVDB = create_pvdb(device_dict)
-sim_beamline = create_beamline(device_dict,screen_name=screen_name)
+devices = load_relevant_controls('DL1.yaml')
 
-#pprint.pprint(device_dict)
+screen_name = 'OTRS:IN20:571'
+PVDB = create_pvdb(devices)
+sim_beamline = create_beamline(devices,screen_name=screen_name)
+
+pprint.pprint(devices)
 #pprint.pprint(PVDB)
 
 twiss_params = {
@@ -30,7 +31,7 @@ twiss_params = {
 sim_cheetah_beam = ParticleBeam.from_twiss(**twiss_params)
 server = SimpleServer()
 server.createPV('', PVDB)
-driver = SimDriver(particle_beam=sim_cheetah_beam, beamline=sim_beamline, screen=screen_name)
+driver = SimDriver(particle_beam=sim_cheetah_beam, beamline=sim_beamline, screen=screen_name, devices=devices)
 
 print('Starting simulated server')
 while True:

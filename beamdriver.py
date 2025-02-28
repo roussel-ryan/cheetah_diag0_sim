@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 class SimDriver(Driver):
-    def __init__(self, particle_beam: ParticleBeam, beamline: Segment, screen: str):
+    def __init__(self, particle_beam: ParticleBeam, beamline: Segment, screen: str, devices: dict):
         super().__init__()
         self.sim_beam = particle_beam
         self.sim_beamline = beamline
