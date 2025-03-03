@@ -11,9 +11,10 @@ devices = load_relevant_controls('DL1.yaml')
 
 screen_name = 'OTRS:IN20:571'
 PVDB = create_pvdb(devices)
+#print(PVDB.keys())
 sim_beamline = create_beamline(devices,screen_name=screen_name)
 
-pprint.pprint(devices)
+#pprint.pprint(devices)
 #pprint.pprint(PVDB)
 
 twiss_params = {
@@ -24,7 +25,7 @@ twiss_params = {
 'alpha_x' : torch.tensor(0.0),
 'beta_y' : torch.tensor(1.0),
 'alpha_y' : torch.tensor(0.0),
-'total_charge': torch.tensor(1e-9)
+'total_charge': torch.tensor(1e5)
 }
 # set beam from random distribution not twiss
 

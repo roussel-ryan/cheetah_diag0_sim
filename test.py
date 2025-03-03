@@ -8,10 +8,11 @@ image = np.array(flat_image).reshape(ncol,nrow)
 
 
 
-put = epics.caput('QUAD:IN20:781:BCTRL', 5.5)
-put = epics.caput('QUAD:IN20:631:BCTRL', 5)
-put = epics.caput('QUAD:IN20:525:BCTRL', 10)
-put = epics.caput('QUAD:IN20:651:BCTRL', -15)
+put = epics.caput('QUAD:IN20:425:BCTRL', 12)
+put = epics.caput('QUAD:IN20:441:BCTRL', 7)
+put = epics.caput('QUAD:IN20:471:BCTRL', -12)
+put = epics.caput('QUAD:IN20:511:BCTRL', -1.5)
+put = epics.caput('QUAD:IN20:525:BCTRL', -18)
 
 flat_image=epics.caget('OTRS:IN20:571:Image:ArrayData')
 image2 = np.array(flat_image).reshape(ncol,nrow)

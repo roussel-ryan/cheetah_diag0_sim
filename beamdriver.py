@@ -15,15 +15,17 @@ class SimDriver(Driver):
 
     def read(self,reason):
         if 'Image:ArrayData' in reason and reason.rsplit(':',2)[0] == self.screen:
-            print(self.devices[self.screen]["madname"])
-            self.image_data = self.get_screen_distribution(screen_name = self.screen,
+            madname = self.devices[self.screen]["madname"]
+            print(madname)
+            self.image_data = self.get_screen_distribution(screen_name = madname,
             particle_beam=self.sim_beam,beamline=self.sim_beamline)
             value = list(self.image_data.flatten())
         elif 'QUAD' and 'BCTRL' in reason:
             quad_name = reason.rsplit(':',1)[0]
-            value_from_segment = self.get_quad_value(quad_name, self.sim_beamline)
+            madname = self.devices[quad_name]["madname"]
+            value_from_segment = self.get_quad_value(madname, self.sim_beamline)
             value = self.getParam(reason)
-            print(f"""segment value for {reason}  {value_from_segment},
+            print(f"""segment value for {madname}  {value_from_segment},
             matches pv value: {value}, {value_from_segment==value}""")
         else:
             value = self.getParam(reason)
@@ -32,8 +34,9 @@ class SimDriver(Driver):
     def write(self, reason, value):
         if 'QUAD' and 'BCTRL' in reason:
             quad_name = reason.rsplit(':',1)[0]
-            print(self.devices[quad_name]["madname"])
-            self.set_quad_value(quad_name,value,self.sim_beamline)
+            madname = self.devices[quad_name]["madname"]
+            print(madname)
+            self.set_quad_value(madname,value,self.sim_beamline)
             self.setParam(reason,value)
         elif 'QUAD' in reason:
             self.setParam(reason,value)
@@ -68,8 +71,10 @@ class SimDriver(Driver):
             index_num = names.index(screen_name)
             img = beamline.elements[index_num].reading
             return img
-#TODO: start server takebeam size measurements and plot them in experiment.nb
-#TODO: build cheetah accelerator with madname instead of control name
+        
+#TODO: start server takebeam size measurements and plot them in experiment.nb - image isn't processing
+#TODO: build cheetah accelerator with madname instead of control name -> done I think? 
 #TODO: when a bctrl or image pv is called look up the pv in the accelerator by madname
 
 #TODO: build in wait_time when performing scans
+#TODO: when caput to bctrl -> set bact pv,
