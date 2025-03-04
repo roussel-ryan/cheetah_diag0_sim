@@ -14,18 +14,17 @@ class SimDriver(Driver):
         self.screen = screen
 
     def read(self,reason):
-        print(f'{reason}')
         if 'Image:ArrayData' in reason and reason.rsplit(':',2)[0] == self.screen:
             madname = self.devices[self.screen]["madname"]
             self.image_data = self.get_screen_distribution(screen_name = madname)
             value = list(self.image_data.flatten())
         elif 'QUAD' in reason and 'BCTRL' in reason:
-            print(f'reading {reason}')
+
             quad_name = reason.rsplit(':',1)[0]
             madname = self.devices[quad_name]["madname"]
             value = self.get_quad_value(madname)
         elif 'QUAD' in reason and 'BACT' in reason:
-            print(f'reading {reason}')
+
             quad_name = reason.rsplit(':',1)[0]
             madname = self.devices[quad_name]["madname"]
             value = self.get_quad_value(madname)
@@ -40,7 +39,7 @@ class SimDriver(Driver):
             self.set_quad_value(madname,value)
             self.setParam(reason,value)
         elif 'QUAD' in reason and 'BACT' in reason:
-            self.setParam(reason,value)
+            pass
         elif 'QUAD' in reason:
             self.setParam(reason,value)
         elif 'OTRS' in reason:
@@ -51,10 +50,7 @@ class SimDriver(Driver):
     
     def get_quad_value(self, quad_name:str):
         names = [element.name for element in self.sim_beamline.elements]
-        print(quad_name)
-        print(names)
         if quad_name in names:
-            print('getting quad_value')
             index_num = names.index(quad_name)
             quad_value = self.sim_beamline.elements[index_num].k1.item()
         else:
