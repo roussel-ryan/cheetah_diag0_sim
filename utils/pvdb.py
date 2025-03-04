@@ -25,6 +25,12 @@ def create_pvdb(device: dict, **default_params) -> dict:
                 pvs.get('bcon', f'{key}:missing_bcon'): {
                     'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20
                     },
+                pvs.get('ctrl', f'{key}:missing_ctrl'): {
+                    'type':'enum', 'enums': ['Ready', 'TRIM', 'Perturb', 
+                                            'MORE_IF_NEEDED']
+                    # can freeze ctrls after caput bctrl and have a scan that procs after and resets the pv if needed
+                    },
+                
             }
             pvdb.update(quad_pvdb)
 

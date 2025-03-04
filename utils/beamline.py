@@ -21,7 +21,7 @@ def create_beamline(devices:dict, screen_name:str, **params):
     segment_list.append(screen)
             
     segment = Segment(elements = segment_list)
-    print(segment.elements)
+    #print(segment.elements)
     return segment
 
 #TODO: screen improvements

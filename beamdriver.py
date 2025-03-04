@@ -12,6 +12,16 @@ class SimDriver(Driver):
         self.sim_beamline = beamline
         self.image_data = np.array([])
         self.screen = screen
+        self.set_defaults_for_ctrl(0)
+
+    def set_defaults_for_ctrl(self,default_value:int):
+        for key in list(self.devices.keys()):
+            #print(key)
+            if 'QUAD' in key:
+                #print(key)
+                ctrl_pv = key+":CTRL"
+                print(ctrl_pv)
+                self.setParam(ctrl_pv,default_value)
 
     def read(self,reason):
         if 'Image:ArrayData' in reason and reason.rsplit(':',2)[0] == self.screen:
