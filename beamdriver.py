@@ -16,11 +16,8 @@ class SimDriver(Driver):
 
     def set_defaults_for_ctrl(self,default_value:int):
         for key in list(self.devices.keys()):
-            #print(key)
             if 'QUAD' in key:
-                #print(key)
                 ctrl_pv = key+":CTRL"
-                print(ctrl_pv)
                 self.setParam(ctrl_pv,default_value)
 
     def read(self,reason):
@@ -83,6 +80,7 @@ class SimDriver(Driver):
         names = [element.name for element in self.sim_beamline.elements]
         if screen_name in names:
             index_num = names.index(screen_name)
+            print(self.sim_beamline.elements[index_num])
             img = self.sim_beamline.elements[index_num].reading
             return img
         

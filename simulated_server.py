@@ -7,7 +7,7 @@ from utils.load_yaml import load_relevant_controls
 from utils.pvdb import create_pvdb
 from utils.beamline import create_beamline
 import pprint
-
+'''
 devices = load_relevant_controls('DL1.yaml')
 pprint.pprint(devices)
 screen_name = 'OTRS:IN20:571'
@@ -49,14 +49,14 @@ design_incoming = ParticleBeam.from_twiss(
     alpha_y=torch.tensor([-1.7981430638316598]),
     emittance_y=torch.tensor([1e-06]),
     energy=torch.tensor([134999999.9999981]),
-    dtype=torch.float64,
+    dtype=torch.float32,
 )
 
-print(design_incoming)
+#print(design_incoming)
 
 
 lcls_lattice = Segment.from_lattice_json("lcls_cu_segment_otr2.json")
-print(lcls_lattice)
+#print(lcls_lattice)
 devices = load_relevant_controls('DL1.yaml')
 screen_name = 'OTRS:IN20:571'
 PVDB = create_pvdb(devices)
@@ -68,4 +68,3 @@ driver = SimDriver(particle_beam=design_incoming, beamline=lcls_lattice, screen=
 print('Starting simulated server')
 while True:
     server.process(0.1)
-'''
