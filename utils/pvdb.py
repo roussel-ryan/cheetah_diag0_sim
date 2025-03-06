@@ -49,7 +49,7 @@ def create_pvdb(device: dict, **default_params) -> dict:
                     'value': default_params.get('n_col', 1040)
                 },
                 pvs.get('resolution', f'{key}:missing_resolution'): {
-                    'value': default_params.get('resolution', 12.5),
+                    'value': default_params.get('resolution', 4.65),
                     'unit': 'um/px'
                 },
             }
