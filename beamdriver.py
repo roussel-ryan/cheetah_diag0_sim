@@ -3,7 +3,10 @@ from cheetah.particles import ParticleBeam
 from cheetah.accelerator import Segment
 import numpy as np
 import torch
-
+from lcls_tools.common.data.model_general_calcs import bdes_to_kmod, kmod_to_bdes
+import threading
+from concurrent.futures import ThreadPoolExecutor
+import time
 class SimDriver(Driver):
     def __init__(self, particle_beam: ParticleBeam, beamline: Segment, screen: str, devices: dict):
         super().__init__()
@@ -12,7 +15,12 @@ class SimDriver(Driver):
         self.sim_beamline = beamline
         self.image_data = np.array([])
         self.screen = screen
+        
         self.set_defaults_for_ctrl(0)
+        self.sim_beamline.transfer_maps_merged(self.sim_beam)
+        self.otr2_image = self.sim_beamline.otr2.reading.flatten().tolist()
+
+
 
     def set_defaults_for_ctrl(self,default_value:int):
         for key in list(self.devices.keys()):
@@ -20,31 +28,36 @@ class SimDriver(Driver):
                 ctrl_pv = key+":CTRL"
                 self.setParam(ctrl_pv,default_value)
 
+    def get_bact_defaults(self): 
+        
+        names = [element.name for element in self.sim_beamline.elements]
+        for key in list(self.devices.keys()):
+            if 'QUAD' in key and 'BACT' in key:
+                madname = self.devices[key]["madname"]
+
     def read(self,reason):
         if 'Image:ArrayData' in reason and reason.rsplit(':',2)[0] == self.screen:
+            print('reading screen')
             madname = self.devices[self.screen]["madname"]
             self.image_data = self.get_screen_distribution(screen_name = madname)
-            value = list(self.image_data.flatten())
+            value = self.image_data.flatten().tolist()
         elif 'QUAD' in reason and 'BCTRL' in reason:
-
             quad_name = reason.rsplit(':',1)[0]
             madname = self.devices[quad_name]["madname"]
             value = self.get_quad_value(madname)
         elif 'QUAD' in reason and 'BACT' in reason:
-
             quad_name = reason.rsplit(':',1)[0]
             madname = self.devices[quad_name]["madname"]
             value = self.get_quad_value(madname)
         else:
             value = self.getParam(reason)
         return value
-        
+
     def write(self, reason, value):
         if 'QUAD' in reason and 'BCTRL' in reason:
             quad_name = reason.rsplit(':',1)[0]
             madname = self.devices[quad_name]["madname"]
             self.set_quad_value(madname,value)
-            self.setParam(reason,value)
         elif 'QUAD' in reason and 'BACT' in reason:
             pass
         elif 'QUAD' in reason:
@@ -52,14 +65,19 @@ class SimDriver(Driver):
         elif 'OTRS' in reason:
             print(f"""Write to OTRS pvs is disabled, 
                   failed to write to {reason}""")
-    
 
     
     def get_quad_value(self, quad_name:str):
         names = [element.name for element in self.sim_beamline.elements]
         if quad_name in names:
             index_num = names.index(quad_name)
-            quad_value = self.sim_beamline.elements[index_num].k1.item()
+            kmod = self.sim_beamline.elements[index_num].k1.item()
+            length = self.sim_beamline.elements[index_num].length.item()
+            energy = self.sim_beam.energy.item()
+            quad_value = kmod_to_bdes(e_tot= energy, effective_length = length, k = kmod)
+            
+            #quad_value =self.sim_beamline.elements[index_num].k1.item()
+            print(f"kmod is {kmod} with quad_value {quad_value}")
         else:
             print(f"""Warning {quad_name} not in Segment""")
             quad_value = np.nan
@@ -70,17 +88,21 @@ class SimDriver(Driver):
         names = [element.name for element in self.sim_beamline.elements]
         if quad_name in names:
             index_num = names.index(quad_name)
-            self.sim_beamline.elements[index_num].k1 = torch.tensor(quad_value)
+            length = (self.sim_beamline.elements[index_num].length).item()
+            energy = self.sim_beam.energy.item()
+            kmod = bdes_to_kmod(e_tot=energy, effective_length=length, bdes = quad_value)
+
+            self.sim_beamline.elements[index_num].k1 = torch.tensor(kmod)
             print(f"""Quad in segment with name {quad_name}
-                   set to {quad_value}""")
+                   set to kmod {kmod} with quad value {quad_value}""")
 
     def get_screen_distribution(self, screen_name:str)->list[float]:
         #TODO: put some safety stuff in here
         self.sim_beamline.track(self.sim_beam)
+
         names = [element.name for element in self.sim_beamline.elements]
         if screen_name in names:
             index_num = names.index(screen_name)
-            print(self.sim_beamline.elements[index_num])
             img = self.sim_beamline.elements[index_num].reading
             return img
         

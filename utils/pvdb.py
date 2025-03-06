@@ -38,15 +38,15 @@ def create_pvdb(device: dict, **default_params) -> dict:
             screen_pvdb = {
                 pvs.get('image', f'{key}:missing_image'): {
                     'type': 'float',
-                    'count': default_params.get('n_row', 600) * default_params.get('n_col', 800)
+                    'count': default_params.get('n_row', 1392) * default_params.get('n_col', 1040)
                 },
                 pvs.get('n_row', f'{key}:missing_n_row'): {
                     'type': 'int',
-                    'value': default_params.get('n_row', 600)
+                    'value': default_params.get('n_row', 1392)
                 },
                 pvs.get('n_col', f'{key}:missing_n_col'): {
                     'type': 'int',
-                    'value': default_params.get('n_col', 800)
+                    'value': default_params.get('n_col', 1040)
                 },
                 pvs.get('resolution', f'{key}:missing_resolution'): {
                     'value': default_params.get('resolution', 12.5),

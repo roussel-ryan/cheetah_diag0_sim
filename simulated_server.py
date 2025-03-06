@@ -42,13 +42,14 @@ while True:
 '''
 
 design_incoming = ParticleBeam.from_twiss(
-    beta_x=torch.tensor([4.682800510296777]),
-    alpha_x=torch.tensor([-1.796365384623861]),
-    emittance_x=torch.tensor([1e-06]),
-    beta_y=torch.tensor([4.688727673835899]),
-    alpha_y=torch.tensor([-1.7981430638316598]),
-    emittance_y=torch.tensor([1e-06]),
-    energy=torch.tensor([134999999.9999981]),
+    beta_x=torch.tensor(4.682800510296777),
+    alpha_x=torch.tensor(-1.796365384623861),
+    emittance_x=torch.tensor(1e-06),
+    beta_y=torch.tensor(4.688727673835899),
+    alpha_y=torch.tensor(-1.7981430638316598),
+    emittance_y=torch.tensor(1e-06),
+    energy=torch.tensor(134999999.9999981),
+    total_charge = torch.tensor(1e5),
     dtype=torch.float32,
 )
 
