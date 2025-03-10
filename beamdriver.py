@@ -8,14 +8,36 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 import time
 class SimDriver(Driver):
-    def __init__(self, particle_beam: ParticleBeam, beamline: Segment, screen: str, devices: dict):
+    def __init__(self, screen: str,
+                 devices: dict,
+                 design_incoming_beam:dict = None,
+                 particle_beam: ParticleBeam = None,
+                 lattice_file: str = None,
+                 beamline: Segment = None):
         super().__init__()
+
         self.devices = devices
-        self.sim_beam = particle_beam
-        self.sim_beamline = beamline
-        self.image_data = np.array([])
         self.screen = screen
+
+        if particle_beam:
+            self.design_incoming_beam = None
+            self.sim_beam = particle_beam
+        elif design_incoming_beam:
+            self.design_incoming_beam = design_incoming_beam
+            self.sim_beam = ParticleBeam.from_openpmd_file( **design_incoming_beam)
+        else:
+            raise ValueError('Pass a particle beam or an particle beam config dict w/impact file')
+
+        if beamline:
+            self.lattice_file = None
+            self.sim_beamline = beamline
+        elif lattice_file:
+            self.lattice_file = lattice_file
+            self.sim_beamline = Segment.from_lattice_json(lattice_file)
+        else:
+            raise ValueError('Pass a lattice file or lattice')
         
+        self.image_data = np.array([])
         self.set_defaults_for_ctrl(0)
         self.sim_beamline.transfer_maps_merged(self.sim_beam)
         self.otr2_image = self.sim_beamline.otr2.reading.flatten().tolist()
@@ -27,13 +49,6 @@ class SimDriver(Driver):
             if 'QUAD' in key:
                 ctrl_pv = key+":CTRL"
                 self.setParam(ctrl_pv,default_value)
-
-    def get_bact_defaults(self): 
-        
-        names = [element.name for element in self.sim_beamline.elements]
-        for key in list(self.devices.keys()):
-            if 'QUAD' in key and 'BACT' in key:
-                madname = self.devices[key]["madname"]
 
     def read(self,reason):
         if 'Image:ArrayData' in reason and reason.rsplit(':',2)[0] == self.screen:
@@ -49,6 +64,8 @@ class SimDriver(Driver):
             quad_name = reason.rsplit(':',1)[0]
             madname = self.devices[quad_name]["madname"]
             value = self.get_quad_value(madname)
+        elif 'VIRT:BEAM:EMITTANCES' == reason:
+            value = [self.sim_beam.emittance_x.item(),self.sim_beam.emittance_y.item()]
         else:
             value = self.getParam(reason)
         return value
@@ -65,8 +82,13 @@ class SimDriver(Driver):
         elif 'OTRS' in reason:
             print(f"""Write to OTRS pvs is disabled, 
                   failed to write to {reason}""")
+        elif 'VIRT:BEAM:RESET_SIM' == reason:
+            print('resetting')
+            self.sim_beam = ParticleBeam.from_openpmd_file(**self.design_incoming_beam)
+            self.sim_beamline = Segment.from_lattice_json(self.lattice_file)
+            self.sim_beamline.transfer_maps_merged(self.sim_beam)
+            #self.otr2_image = self.sim_beamline.otr2.reading.flatten().tolist()
 
-    
     def get_quad_value(self, quad_name:str):
         names = [element.name for element in self.sim_beamline.elements]
         if quad_name in names:
