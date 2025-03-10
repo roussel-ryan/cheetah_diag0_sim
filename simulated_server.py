@@ -40,30 +40,34 @@ print('Starting simulated server')
 while True:
     server.process(0.1)
 '''
-
+'''
 design_incoming = ParticleBeam.from_twiss(
     beta_x=torch.tensor(4.682800510296777),
     alpha_x=torch.tensor(-1.796365384623861),
-    emittance_x=torch.tensor(1e-06),
+    emittance_x=torch.tensor(1e-06/264),
     beta_y=torch.tensor(4.688727673835899),
     alpha_y=torch.tensor(-1.7981430638316598),
-    emittance_y=torch.tensor(1e-06),
+    emittance_y=torch.tensor(1e-06/264),
     energy=torch.tensor(134999999.9999981),
     total_charge = torch.tensor(1e5),
     dtype=torch.float32,
 )
-
+'''
 #print(design_incoming)
-
+design_incoming = ParticleBeam.from_openpmd_file(path='impact_inj_output_YAG03.h5', energy = torch.tensor(125e6),dtype=torch.float32)
+#TODO: pv that returns beam emittance 
 
 lcls_lattice = Segment.from_lattice_json("lcls_cu_segment_otr2.json")
+
 #print(lcls_lattice)
+
 devices = load_relevant_controls('DL1.yaml')
 screen_name = 'OTRS:IN20:571'
 PVDB = create_pvdb(devices)
 server = SimpleServer()
 
 server.createPV('', PVDB)
+print(design_incoming.emittance_x, design_incoming.emittance_y)
 driver = SimDriver(particle_beam=design_incoming, beamline=lcls_lattice, screen=screen_name, devices=devices)
 
 print('Starting simulated server')
