@@ -7,6 +7,8 @@ from lcls_tools.common.data.model_general_calcs import bdes_to_kmod, kmod_to_bde
 import threading
 from concurrent.futures import ThreadPoolExecutor
 import time
+from scipy.stats import cauchy
+
 class SimDriver(Driver):
     def __init__(self, screen: str,
                  devices: dict,
@@ -25,6 +27,7 @@ class SimDriver(Driver):
         elif design_incoming_beam:
             self.design_incoming_beam = design_incoming_beam
             self.sim_beam = ParticleBeam.from_openpmd_file( **design_incoming_beam)
+            self.sim_beam.particle_charges = torch.tensor(1.0)
         else:
             raise ValueError('Pass a particle beam or an particle beam config dict w/impact file')
 
@@ -85,6 +88,7 @@ class SimDriver(Driver):
         elif 'VIRT:BEAM:RESET_SIM' == reason:
             print('resetting')
             self.sim_beam = ParticleBeam.from_openpmd_file(**self.design_incoming_beam)
+            self.sim_beam.particle_charges = torch.tensor(1.0)
             self.sim_beamline = Segment.from_lattice_json(self.lattice_file)
             self.sim_beamline.transfer_maps_merged(self.sim_beam)
             #self.otr2_image = self.sim_beamline.otr2.reading.flatten().tolist()
@@ -126,6 +130,10 @@ class SimDriver(Driver):
         if screen_name in names:
             index_num = names.index(screen_name)
             img = self.sim_beamline.elements[index_num].reading
+
+            # add noise to the image
+            img += np.abs(cauchy.rvs(loc=0, scale=0.5, size=img.shape))*0.01 + np.abs(np.random.normal(loc=0, scale=10, size=img.shape))
+
             return img
         
 #TODO: start server takebeam size measurements and plot them in experiment.nb - image isn't processing
