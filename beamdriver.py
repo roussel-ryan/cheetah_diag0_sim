@@ -132,7 +132,7 @@ class SimDriver(Driver):
             img = self.sim_beamline.elements[index_num].reading
 
             # add noise to the image
-            img += np.abs(cauchy.rvs(loc=0, scale=0.5, size=img.shape))*0.01 + np.abs(np.random.normal(loc=0, scale=10, size=img.shape))
+            img += np.abs(np.random.normal(loc=0, scale=10, size=img.shape))
 
             return img
         
