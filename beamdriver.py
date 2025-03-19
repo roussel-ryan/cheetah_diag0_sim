@@ -49,6 +49,8 @@ class SimDriver(Driver):
     def sim_beam(self,beam: ParticleBeam | None):
         """Sets sim_beam used by read and write functions,
         if set to None it will re-initialize to default value"""
+        if not isinstance(beam, ParticleBeam):
+            beam = None 
         self._sim_beam = beam
 
     @property
@@ -68,6 +70,8 @@ class SimDriver(Driver):
     def sim_beamline(self,beamline: Segment | None):
         """Sets sim_beamline used by read and write functions,
         if set to None it will re-initialize to default value"""
+        if not isinstance(beamline, Segment):
+            beamline = None 
         self._sim_beamline = beamline
 
     @property
@@ -95,7 +99,6 @@ class SimDriver(Driver):
             length = (self.sim_beamline.elements[index_num].length).item()
             energy = self.sim_beam.energy.item()
             kmod = bdes_to_kmod(e_tot=energy, effective_length=length, bdes = quad_value)
-
             self.sim_beamline.elements[index_num].k1 = torch.tensor(kmod)
             print(f"""Quad in segment with name {quad_name}
                    set to kmod {kmod} with quad value {quad_value}""")
@@ -117,16 +120,17 @@ class SimDriver(Driver):
 
 
     def get_screen_distribution(self, screen_name: str)-> list[float]:
+        """Retrieves image from simulation beamline and adds noise, has 
+        a bug that the first time is called is not addding noise"""
         self.sim_beamline.track(self.sim_beam)
         names = [element.name for element in self.sim_beamline.elements]
         if screen_name in names:
             index_num = names.index(screen_name)
             image = self.sim_beamline.elements[index_num].reading
-            print('adding noise')
             image += np.abs(np.random.normal(loc=0, scale=10, size=image.shape))
             return image
         
-    def read(self,reason):
+    def read(self, reason):
         if 'Image:ArrayData' in reason and reason.rsplit(':',2)[0] == self.screen:
             print('reading screen')
             madname = self.devices[self.screen]["madname"]
