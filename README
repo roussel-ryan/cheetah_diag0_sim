@@ -1,0 +1,46 @@
+Simulated Linac using Cheetah and PCASpy
+
+This project provides a simulated EPICS server that hosts PVs using PCASpy. The simulation is designed to work with the Cheetah accelerator framework and includes examples for interfacing with the lcls-tools.
+
+Setup Instructions
+
+To set up and run the simulated server, follow these steps:
+
+Create the environment:
+
+conda env create -f environment.yml
+
+Activate the environment:
+
+conda activate linac-simulation
+
+Source the setup script:
+
+source setup.sh
+
+Run the simulated server:
+
+python simulated_server.py
+
+Examples:
+
+This repository includes example scripts demonstrating how to interface with the simulated EPICS server using the lcls-tools module, which is available in the provided environment. These examples illustrate how to read from and write to process variables (PVs).
+
+Dependencies:
+
+The required dependencies are listed in environment.yml, ensuring a reproducible setup. The environment includes:
+
+PCASpy for hosting EPICS PVs
+
+Cheetah for beam simulation
+
+lcls-tools for interfacing with EPICS
+
+Notes:
+
+Ensure that all dependencies are installed properly and that the setup script is sourced before running the server to avoid missing environment variables or paths.
+
+For any issues, verify that the required environment is activated and that caget and caput can communicate with the hosted PVs.
+
+You will also need to provide your own beam distribution (this setup is designed to run on the LCLS-I Cu Injector)
+
