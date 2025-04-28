@@ -1,5 +1,5 @@
 from cheetah.particles import ParticleBeam
-from cheetah.accelerator import Drift, Quadrupole, Segment, Screen
+from cheetah.accelerator import Drift, Quadrupole, Segment, Screen, TransverseDeflectingCavity
 import torch
 
 def create_beamline(devices:dict, screen_name:str, **params):
@@ -18,8 +18,11 @@ def create_beamline(devices:dict, screen_name:str, **params):
         elif screen_name in key:
             madname = devices[key].get('madname', f'missing_screen_{key_num}')
             screen =  Screen(name = madname, resolution= (params.get('nrow', 600), params.get('ncol',800)), is_active=True )
-    segment_list.append(screen)
+            segment_list.append(screen)
+        elif 'TCAV' in key:
             
+            TransverseDeflectingCavity(length=torch.tensor(.8), voltage= torch.tensor(350000), phase= torch.tensor(0), frequency=torch.tensor(2856*1e6),
+                                       )
     segment = Segment(elements = segment_list)
     #print(segment.elements)
     return segment

@@ -1,63 +1,93 @@
 def create_pvdb(device: dict, **default_params) -> dict:
-    #TODO: args is segme
     pvdb = {}
 
     for key, device_info in device.items():
-        pvs = device_info.get('pvs', {})  # Safely get 'pvs' dictionary, default to empty dict
-        
+        pvs = device_info.get('pvs', {})  # Default to empty dict if 'pvs' is missing
+
+        def get_pv(name: str) -> str:
+            return pvs.get(name, f'{key}:missing_{name}')
+
         if 'QUAD' in key:
-            quad_pvdb = {
-                pvs.get('bact', f'{key}:missing_bact'): {
-                    'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20
-                    },
-                pvs.get('bctrl', f'{key}:missing_bctrl'): {
-                    'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20
-                    },
-                pvs.get('bmax', f'{key}:missing_bmax'): {
-                    'value': 20.0, 'prec': 5
-                    },
-                pvs.get('bmin', f'{key}:missing_bmin'): {
-                    'value': -20.0, 'prec': 5
-                    },
-                pvs.get('bdes', f'{key}:missing_bdes'): {
-                    'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20
-                    },
-                pvs.get('bcon', f'{key}:missing_bcon'): {
-                    'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20
-                    },
-                pvs.get('ctrl', f'{key}:missing_ctrl'): {
-                    'type':'enum', 'enums': ['Ready', 'TRIM', 'Perturb', 
-                                            'MORE_IF_NEEDED']
-                    # can freeze ctrls after caput bctrl and have a scan that procs after and resets the pv if needed
-                    },
-                
+            quad_params = {
+                get_pv('bact'): {'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20},
+                get_pv('bctrl'): {'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20},
+                get_pv('bmax'): {'value': 20.0, 'prec': 5},
+                get_pv('bmin'): {'value': -20.0, 'prec': 5},
+                get_pv('bdes'): {'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20},
+                get_pv('bcon'): {'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20},
+                get_pv('ctrl'): {
+                    'type': 'enum',
+                    'enums': ['Ready', 'TRIM', 'Perturb', 'MORE_IF_NEEDED']
+                }
             }
-            pvdb.update(quad_pvdb)
+            pvdb.update(quad_params)
 
         elif 'OTRS' in key:
-            screen_pvdb = {
-                pvs.get('image', f'{key}:missing_image'): {
+            n_row = default_params.get('n_row', 1392)
+            n_col = default_params.get('n_col', 1040)
+            screen_params = {
+                get_pv('image'): {
                     'type': 'float',
-                    'count': default_params.get('n_row', 1392) * default_params.get('n_col', 1040)
+                    'count': n_row * n_col
                 },
-                pvs.get('n_row', f'{key}:missing_n_row'): {
+                get_pv('n_row'): {
                     'type': 'int',
-                    'value': default_params.get('n_row', 1392)
+                    'value': n_row
                 },
-                pvs.get('n_col', f'{key}:missing_n_col'): {
+                get_pv('n_col'): {
                     'type': 'int',
-                    'value': default_params.get('n_col', 1040)
+                    'value': n_col
                 },
-                pvs.get('resolution', f'{key}:missing_resolution'): {
+                get_pv('resolution'): {
                     'value': default_params.get('resolution', 4.65),
                     'unit': 'um/px'
                 },
+                get_pv('pneumatic'): {
+                    'type': 'enum',
+                    'enums': ['OUT', 'IN']
+                }
             }
-            pvdb.update(screen_pvdb)
+        # need to change screen class...... pneumatic is an enum not a thingy 
+            pvdb.update(screen_params)
+        
+        elif 'TCAV' in key:
+            tcav_params = {
+            get_pv('amp_fbenb'): {
+                'type': 'enum',
+                'enums': ['Disable', 'Enable']
+            },
+            get_pv('amp_fbst'): {
+                'type': 'enum',
+                'enums': ['Disable', 'Pause', 'Feedforward', 'Enable']
+            },
+            get_pv('phase_fbenb'): {
+                'type': 'enum',
+                'enums': ['Disable', 'Enable']
+            },
+            get_pv('phase_fbst'): {
+                'type': 'enum',
+                'enums': ['Disable', 'Pause', 'Feedforward', 'Enable']
+            },
+            get_pv('rf_enable'): {
+                'type': 'enum',
+                'enums': ['Disable', 'Enable']
+            },
+            get_pv('amp_set'): {
+                'value': 0.0,
+                'prec': 5,
+            },
+            get_pv('phase_set'): {
+                'value': 0.0,
+                'prec': 5,
+            },
+            get_pv('mode_config'): {
+                'type': 'enum',
+                'enums': ['Disable', 'ACCEL', 'STDBY']
+            },
+            }
+            pvdb.update(tcav_params)
 
     return pvdb
-
-
 #TODO: make defaults more robust
 #TODO: ensure matching defaults are also passed to beamline.py correctly
 #TODO: setup multiarea create_pvdb
