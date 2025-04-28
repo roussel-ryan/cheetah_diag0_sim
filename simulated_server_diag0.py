@@ -4,7 +4,7 @@ from beamdriver import SimDriver
 from cheetah.accelerator import Segment 
 import torch
 from utils.load_yaml import load_relevant_controls
-from utils.pvdb_new import create_pvdb
+from utils.pvdb import create_pvdb
 import pprint
 
 incoming_beam = ParticleBeam.from_twiss(
