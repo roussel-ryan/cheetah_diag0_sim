@@ -5,16 +5,67 @@ import numpy as np
 import torch
 from lcls_tools.common.data.model_general_calcs import bdes_to_kmod, kmod_to_bdes
 from scipy.stats import cauchy
+import pprint
+# TODO: set defaults for all tcav enum pvs
+#  
 class SimDriver(Driver):
     def __init__(self, screen: str,
                  devices: dict,
                  design_incoming_beam:dict = None,
                  particle_beam: ParticleBeam = None,
                  lattice_file: str = None,
-                 beamline: Segment = None):
+                 beamline: Segment = None,
+                 enum_init_values: dict = None):
         super().__init__()
 
+
+
         self.devices = devices
+        pprint.pprint(devices)
+        '''
+            'OTRS:DIAG0:525': {'madname': 'otrdg04',
+                    'metadata': {'area': 'DIAG0',
+                                 'beam_path': ['SC_DIAG0'],
+                                 'sum_l_meters': 61.871,
+                                 'type': 'PROF'},
+                    'pvs': {'image': 'OTRS:DIAG0:525:Image:ArrayData',
+                            'n_bits': 'OTRS:DIAG0:525:N_OF_BITS',
+                            'n_col': 'OTRS:DIAG0:525:Image:ArraySize1_RBV',
+                            'n_row': 'OTRS:DIAG0:525:Image:ArraySize0_RBV',
+                            'pneumatic': 'OTRS:DIAG0:525:PNEUMATIC',
+                            'ref_rate': 'OTRS:DIAG0:525:ArrayRate_RBV',
+                            'ref_rate_vme': 'OTRS:DIAG0:525:FRAME_RATE',
+                            'resolution': 'OTRS:DIAG0:525:RESOLUTION',
+                            'sys_type': 'OTRS:DIAG0:525:SYS_TYPE'}},
+            'QUAD:DIAG0:190': {'madname': 'qdg001',
+                    'metadata': {'area': 'DIAG0',
+                                 'beam_path': ['SC_DIAG0'],
+                                 'l_eff': 0.197,
+                                 'sum_l_meters': 46.232,
+                                 'type': 'QUAD'},
+                    'pvs': {'bact': 'QUAD:DIAG0:190:BACT',
+                            'bcon': 'QUAD:DIAG0:190:BCON',
+                            'bctrl': 'QUAD:DIAG0:190:BCTRL',
+                            'bdes': 'QUAD:DIAG0:190:BDES',
+                            'bmax': 'QUAD:DIAG0:190:BMAX',
+                            'bmin': 'QUAD:DIAG0:190:BMIN',
+                            'ctrl': 'QUAD:DIAG0:190:CTRL'}},
+            'TCAV:DIAG0:11': {'madname': 'tcxdg0',
+                   'metadata': {'area': 'DIAG0',
+                                'beam_path': ['SC_DIAG0'],
+                                'l_eff': 0.8,
+                                'rf_freq': 2856,
+                                'sum_l_meters': 53.313,
+                                'type': 'LCAV'},
+                   'pvs': {'amp_fbenb': 'TCAV:DIAG0:11:AFBENB',
+                           'amp_fbst': 'TCAV:DIAG0:11:AFBST',
+                           'amp_set': 'TCAV:DIAG0:11:AREQ',
+                           'mode_config': 'TCAV:DIAG0:11:MODECFG',
+                           'phase_fbenb': 'TCAV:DIAG0:11:PFBENB',
+                           'phase_fbst': 'TCAV:DIAG0:11:PFBST',
+                           'phase_set': 'TCAV:DIAG0:11:PREQ',
+                           'rf_enable': 'TCAV:DIAG0:11:RF_ENABLE'}}}
+        '''
         self.screen = screen
 
         self._particle_beam = particle_beam
@@ -24,6 +75,10 @@ class SimDriver(Driver):
 
         self.set_defaults_for_ctrl(0)
 
+    def set_defaults(self, enum_init_values):
+        for pv, init_value in enum_init_values.items():
+            self.setParam(pv, init_value)
+    
     def set_defaults_for_ctrl(self,default_value: int )->None:
         """Sets default quad ctrl value to ready state"""
         keys = [key for key in self.devices]
@@ -60,6 +115,7 @@ class SimDriver(Driver):
             if self._beamline:
                 self._sim_beamline = self._beamline
             elif self._lattice_file:
+                print(self._lattice_file)
                 self._sim_beamline = Segment.from_lattice_json(self._lattice_file)
                 self._sim_beamline.track(self.sim_beam)
             else:
@@ -84,6 +140,12 @@ class SimDriver(Driver):
         """Retrieve the vertical beam emittance."""
         return self.sim_beam.emittance_y.item()
 
+    def get_madname(self, control_name):
+        if control_name in self.devices:
+            madname = self.devices[control_name]["madname"]
+            return madname
+        return None
+    
     def reset_sim(self):
         """Resets sim_beam and sim_beamline to original state"""
         print('Resetting simulation')
@@ -91,7 +153,7 @@ class SimDriver(Driver):
         self.sim_beamline = None
 
 
-    def set_quad_value(self, quad_name: str, quad_value: float):
+    def set_quad_value(self, quad_name: str, quad_value: float) -> None:
         """ Takes quad ctrl name and the k1 strength if the quad is in beamline"""
         names = [element.name for element in self.sim_beamline.elements]
         if quad_name in names:
@@ -130,7 +192,23 @@ class SimDriver(Driver):
             image += np.abs(np.random.normal(loc=0, scale=10, size=image.shape))
             return image
         
+    def move_screen(self, screen_name: str) -> None:
+        """Toggles the in position of the associated screen"""
+        names = [element.name for element in self.sim_beamline.elements]
+        if screen_name in names:
+            index_num = names.index(screen_name)
+            is_active_position = self.sim_beamline.elements[index_num].is_active
+            print(f"screen is in active position: {is_active_position}")
+            toggled = not is_active_position
+            self.sim_beamline.elements[index_num].is_active = toggled
+            print(f"set screen to position: {self.sim_beamline.elements[index_num].is_active}")
+        return {self.sim_beamline.elements[index_num].is_active}
+    
+    def check_screen(self, screen_name):
+        pass
+    
     def read(self, reason):
+        print(reason)
         if 'Image:ArrayData' in reason and reason.rsplit(':',2)[0] == self.screen:
             print('reading screen')
             madname = self.devices[self.screen]["madname"]
@@ -155,8 +233,18 @@ class SimDriver(Driver):
             pass
         elif 'QUAD' in reason:
             self.setParam(reason,value)
-        elif 'OTRS' in reason:
+        elif 'OTRS' in reason and 'PNEUMATIC' in reason:
+            screen = reason.rsplit(':',1)[0]
+            madname = self.devices[screen]["madname"]
+            position = self.move_screen(madname)
+            print(f"got {position}")
+        elif 'OTRS' in reason and 'PNEUMATIC' not in reason:
             print(f"""Write to OTRS pvs is disabled, 
                   failed to write to {reason}""")
         elif 'VIRT:BEAM:RESET_SIM' == reason:
             self.reset_sim()
+        elif 'TCAV' in reason:
+            self.setParam(reason,value)
+
+
+#TODO: add functionality to pop screens in and out

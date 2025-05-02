@@ -20,9 +20,8 @@
         "ddg006b": ["Drift", {"length": 0.12714000046253204, "tracking_method": "cheetah"}],
         "bpmdg0rf": ["Marker", {}],
         "ddg006c": ["Drift", {"length": 0.17285999655723572, "tracking_method": "cheetah"}],
-        "tcxdg0": ["Drift", {"length": 1.600000023841858, "tracking_method": "cheetah"}],
-        "stcav2": ["TransverseDeflectingCavity", {"length" : 0.8, "voltage": 3.5e6, "phase": 0.0, "frequency" : 2856.0e6}],
-        "ddg006d": ["Drift", {"length": -1.696751356124878, "tracking_method": "cheetah"}],
+        "tcxdg0": ["TransverseDeflectingCavity", {"length" : 0.8, "voltage": 0.35e6, "phase": 0.0, "frequency" : 2856.0e6}],
+        "ddg006d": ["Drift", {"length": 0.487, "tracking_method": "cheetah"}],
         "qdg007": ["Quadrupole", {"length": 0.1080000028014183, "k1": -4.543712615966797, "misalignment": [0.0, 0.0], "tilt": 0.0}],
         "ddg007": ["Drift", {"length": 0.5479999780654907, "tracking_method": "cheetah"}],
         "qdg008": ["Quadrupole", {"length": 0.1080000028014183, "k1": 11.37702751159668, "misalignment": [0.0, 0.0], "tilt": 0.0}],
@@ -63,6 +62,6 @@
         "enddiag0": ["Marker", {}]
     },
     "lattices": {
-        "unnamed_element_4764": ["qdg004", "ddg004a", "xcdg003", "ycdg003", "ddg004b", "qdg005", "ddg005a", "xcdg005", "ycdg005", "ddg005b", "qdg006", "ddg006a", "tcydg0", "ddg006b", "bpmdg0rf", "ddg006c", "tcxdg0", "stcav2", "ddg006d", "qdg007", "ddg007", "qdg008", "ddg008a", "xcdg008", "ycdg008", "ddg008b", "qdg009", "ddg009a", "otrdg01", "otrdg01_yag", "ddg009b", "rfbdg002", "ddg009c", "otrdg02", "ddg009d", "wsdg01", "ddg009e", "otrdg03", "otrdg03_yag", "ddg009f", "qdg010", "ddg010a", "xcdg010", "ycdg010", "ddg010b", "qdg011", "ddg011a", "rfbdg003", "ddg011b", "bydg0", "ddg012a", "bpmdg012", "ddg012b", "otrdg04", "ddg012c", "fcdg0du", "enddiag0"]
+        "unnamed_element_4764": ["qdg004", "ddg004a", "xcdg003", "ycdg003", "ddg004b", "qdg005", "ddg005a", "xcdg005", "ycdg005", "ddg005b", "qdg006", "ddg006a", "tcydg0", "ddg006b", "bpmdg0rf", "ddg006c", "tcxdg0", "ddg006d", "qdg007", "ddg007", "qdg008", "ddg008a", "xcdg008", "ycdg008", "ddg008b", "qdg009", "ddg009a", "otrdg01", "otrdg01_yag", "ddg009b", "rfbdg002", "ddg009c", "otrdg02", "ddg009d", "wsdg01", "ddg009e", "otrdg03", "otrdg03_yag", "ddg009f", "qdg010", "ddg010a", "xcdg010", "ycdg010", "ddg010b", "qdg011", "ddg011a", "rfbdg003", "ddg011b", "bydg0", "ddg012a", "bpmdg012", "ddg012b", "otrdg04", "ddg012c", "fcdg0du", "enddiag0"]
     }
 }

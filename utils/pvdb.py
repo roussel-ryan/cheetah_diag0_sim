@@ -1,6 +1,9 @@
+
+import pprint
+
 def create_pvdb(device: dict, **default_params) -> dict:
     pvdb = {}
-
+    #pprint.pprint(default_params)
     for key, device_info in device.items():
         pvs = device_info.get('pvs', {})  # Default to empty dict if 'pvs' is missing
 

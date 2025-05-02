@@ -19,13 +19,13 @@ incoming_beam = ParticleBeam.from_twiss(
     total_charge=torch.tensor(1e-9)
 )
 
-diag0_lattice = Segment.from_lattice_json("lattices/diag0.json")
-
-
-lcls_lattice = 'diag0.json'
+diag0_lattice = Segment.from_lattice_json("lattices/diag0_reconstruction.json")
+#print(diag0_lattice)
 devices = load_relevant_controls('yaml/DIAG0.yaml')
 screen_name = 'OTRS:DIAG0:420'
-PVDB = create_pvdb(devices)
+screen_defaults = {'n_row': 1024, 'n_col': 1024, 'resolution': 11, 'pneumatic': 'OUT' }
+tcav_defaults = {}
+PVDB = create_pvdb(devices, **screen_defaults)
 custom_pvs = {'VIRT:BEAM:EMITTANCES': {'type':'float', 'count': 2},
               'VIRT:BEAM:RESET_SIM': {'value': 0}   
 }
@@ -36,8 +36,8 @@ server = SimpleServer()
 server.createPV('', PVDB)
 driver = SimDriver(screen=screen_name,
                    devices=devices,
-                   design_incoming_beam=incoming_beam,
-                   lattice_file=diag0_lattice)
+                   particle_beam=incoming_beam,
+                   lattice_file="lattices/diag0.json")
 
 print('Starting simulated server')
 while True:
