@@ -1,2 +1,11 @@
+# IDE
+.idea/
+.vscode/
+
+# Build artifacts
 *.pyc
 __pycache__/
+.ipynb_checkpoints/
+
+# Generated
+impact_inj_output_YAG03.h5
