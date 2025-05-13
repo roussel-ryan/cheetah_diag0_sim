@@ -26,8 +26,8 @@ def create_pvdb(device: dict, **default_params) -> dict:
             pvdb.update(quad_params)
 
         elif 'OTRS' in key:
-            n_row = default_params.get('n_row', 1392)
-            n_col = default_params.get('n_col', 1040)
+            n_row = default_params.get('n_row', 1944)
+            n_col = default_params.get('n_col',1472)
             screen_params = {
                 get_pv('image'): {
                     'type': 'float',
@@ -42,7 +42,7 @@ def create_pvdb(device: dict, **default_params) -> dict:
                     'value': n_col
                 },
                 get_pv('resolution'): {
-                    'value': default_params.get('resolution', 4.65),
+                    'value': default_params.get('resolution', 23.33),
                     'unit': 'um/px'
                 },
                 get_pv('pneumatic'): {
