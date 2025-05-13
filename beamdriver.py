@@ -179,7 +179,49 @@ class SimDriver(Driver):
             print(f"""Warning {quad_name} not in Segment""")
             quad_value = 0
         return quad_value
+    
+    def set_tcav_amplitude(self, tcav_name, megavolts_amplitude):
+        """ Set transverse cavity strength of simulation beamline takes Mega Volts and sets in Volts"""
+        names = [element.name for element in self.sim_beamline.elements]
+        if tcav_name in names:
+            index_num = names.index(tcav_name)
+            self.sim_beamline.elements[index_num].voltage = torch.tensor(megavolts_amplitude*1e6)
+            print(f"""TCAV in segment with name {tcav_name}
+                   set to {megavolts_amplitude*1e6 } volts""")
+            
+    def get_tcav_amplitude(self, tcav_name):
+        """Retrieve transverse cavity strength (MV) from the simulation beamline."""
+        names = [element.name for element in self.sim_beamline.elements]
+        if tcav_name in names:
+            index_num = names.index(tcav_name)
+            voltage_amplitude = self.sim_beamline.elements[index_num].voltage.item()
+            mega_voltage_amplitude = (voltage_amplitude/1e6)
+            print(f"Voltage is is {mega_voltage_amplitude}")
+        else:
+            print(f"""Warning {tcav_name} not in Segment""")
+            mega_voltage_amplitude = 0
+        return mega_voltage_amplitude
 
+    def set_tcav_phase(self, tcav_name, phase_in_degrees):
+        """ Set the phase of simulation beamline transverse cavity"""
+        names = [element.name for element in self.sim_beamline.elements]
+        if tcav_name in names:
+            index_num = names.index(tcav_name)
+            self.sim_beamline.elements[index_num].phase= torch.tensor(phase_in_degrees)
+            print(f"""TCAV in segment with name {tcav_name}
+                   set to {phase_in_degrees } degrees""")
+            
+    def get_tcav_phase(self, tcav_name):
+        """Retrieve the phase of the transverse cavity in degrees from the simulation beamline."""
+        names = [element.name for element in self.sim_beamline.elements]
+        if tcav_name in names:
+            index_num = names.index(tcav_name)
+            phase = self.sim_beamline.elements[index_num].phase.item()
+            print(f"Phase in degrees is {phase}")
+        else:
+            print(f"""Warning {tcav_name} not in Segment""")
+            phase = 0
+        return phase
 
     def get_screen_distribution(self, screen_name: str)-> list[float]:
         """Retrieves image from simulation beamline and adds noise, has 
@@ -189,9 +231,12 @@ class SimDriver(Driver):
         if screen_name in names:
             index_num = names.index(screen_name)
             image = self.sim_beamline.elements[index_num].reading
-            image += np.abs(np.random.normal(loc=0, scale=10, size=image.shape))
+            #image += np.abs(np.random.normal(loc=0, scale=10, size=image.shape))
             return image
-        
+  
+    def check_screen(self, screen_name):
+        pass
+
     def move_screen(self, screen_name: str) -> None:
         """Toggles the in position of the associated screen"""
         names = [element.name for element in self.sim_beamline.elements]
@@ -203,12 +248,9 @@ class SimDriver(Driver):
             self.sim_beamline.elements[index_num].is_active = toggled
             print(f"set screen to position: {self.sim_beamline.elements[index_num].is_active}")
         return {self.sim_beamline.elements[index_num].is_active}
-    
-    def check_screen(self, screen_name):
-        pass
-    
+
     def read(self, reason):
-        print(reason)
+        print(f' in read with {reason}')
         if 'Image:ArrayData' in reason and reason.rsplit(':',2)[0] == self.screen:
             print('reading screen')
             madname = self.devices[self.screen]["madname"]
@@ -218,6 +260,17 @@ class SimDriver(Driver):
             quad_name = reason.rsplit(':',1)[0]
             madname = self.devices[quad_name]["madname"]
             value = self.get_quad_value(madname)
+        #can concat tcav stuff into just getter setters for both amp and phase or keep them separate
+        elif 'TCAV' in reason and 'AREQ' in reason:
+            print('reading areq')
+            tcav_name = reason.rsplit(':',1)[0]
+            madname = self.devices[tcav_name]["madname"]
+            value = self.get_tcav_amplitude(madname)
+        elif 'TCAV' in reason and 'PREQ' in reason:
+            print('reading preq')
+            tcav_name = reason.rsplit(':',1)[0]
+            madname = self.devices[tcav_name]["madname"]
+            value = self.get_tcav_phase(madname)
         elif 'VIRT:BEAM:EMITTANCES' == reason:
             value = [self.sim_beam.emittance_x,self.sim_beam.emittance_y]
         else:
@@ -233,18 +286,25 @@ class SimDriver(Driver):
             pass
         elif 'QUAD' in reason:
             self.setParam(reason,value)
-        elif 'OTRS' in reason and 'PNEUMATIC' in reason:
-            screen = reason.rsplit(':',1)[0]
-            madname = self.devices[screen]["madname"]
-            position = self.move_screen(madname)
-            print(f"got {position}")
+        #TODO: deal with popping screens in and out later
+        #elif 'OTRS' in reason and 'PNEUMATIC' in reason:
+        #    screen = reason.rsplit(':',1)[0]
+        #    madname = self.devices[screen]["madname"]
+        #    position = self.move_screen(madname)
+        #    print(f"got {position}")
         elif 'OTRS' in reason and 'PNEUMATIC' not in reason:
             print(f"""Write to OTRS pvs is disabled, 
                   failed to write to {reason}""")
+        elif 'TCAV' in reason and 'AREQ' in reason:
+            tcav_name = reason.rsplit(':',1)[0]
+            madname = self.devices[tcav_name]["madname"]
+            self.set_tcav_amplitude(madname,value)
+        elif 'TCAV' in reason and 'PREQ' in reason:
+            tcav_name = reason.rsplit(':',1)[0]
+            madname = self.devices[tcav_name]["madname"]
+            self.set_tcav_phase(madname,value)
         elif 'VIRT:BEAM:RESET_SIM' == reason:
             self.reset_sim()
-        elif 'TCAV' in reason:
-            self.setParam(reason,value)
 
 
 #TODO: add functionality to pop screens in and out
