@@ -8,7 +8,7 @@ from utils.pvdb import create_pvdb
 
 #design_incoming = ParticleBeam.from_openpmd_file(path='impact_inj_output_YAG03.h5', energy = torch.tensor(125e6),dtype=torch.float32)
 #lcls_lattice = Segment.from_lattice_json("lcls_cu_segment_otr2.json")
-design_incoming_beam = {'path': 'impact_inj_output_YAG03.h5',
+design_incoming_beam = {'path': 'h5/impact_inj_output_YAG03.h5',
                          'energy': torch.tensor(125e6),
                          'dtype':torch.float32}
 lcls_lattice = 'lcls_cu_segment_otr2.json'
