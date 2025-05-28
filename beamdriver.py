@@ -21,7 +21,7 @@ class SimDriver(Driver):
 
 
         self.devices = devices
-        pprint.pprint(devices)
+        #pprint.pprint(devices)
         '''
             'OTRS:DIAG0:525': {'madname': 'otrdg04',
                     'metadata': {'area': 'DIAG0',
@@ -231,7 +231,8 @@ class SimDriver(Driver):
         if screen_name in names:
             index_num = names.index(screen_name)
             image = self.sim_beamline.elements[index_num].reading
-            #image += np.abs(np.random.normal(loc=0, scale=10, size=image.shape))
+            #noise_std = 0.2 * (np.max(image) + .0001)
+            #image += np.abs(np.random.normal(loc=0, scale= noise_std , size=image.shape))
             return image
   
     def check_screen(self, screen_name):
@@ -273,6 +274,10 @@ class SimDriver(Driver):
             value = self.get_tcav_phase(madname)
         elif 'VIRT:BEAM:EMITTANCES' == reason:
             value = [self.sim_beam.emittance_x,self.sim_beam.emittance_y]
+        elif 'VIRT:BEAM:MU:XY' == reason:
+            value = [self.sim_beam.mu_x,self.sim_beam.mu_y]
+        elif 'VIRT:BEAM:SIGMA:XY' == reason:
+            value = [self.sim_beam.sigma_x,self.sim_beam.sigma_y]
         else:
             value = self.getParam(reason)
         return value
