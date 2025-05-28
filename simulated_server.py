@@ -12,7 +12,7 @@ design_incoming_beam = {'path': 'h5/impact_inj_output_YAG03.h5',
                          'energy': torch.tensor(125e6),
                          'dtype':torch.float32}
 lcls_lattice = 'lcls_cu_segment_otr2.json'
-devices = load_relevant_controls('DL1.yaml')
+devices = load_relevant_controls('yaml_configs/DL1.yaml')
 screen_name = 'OTRS:IN20:571'
 PVDB = create_pvdb(devices)
 custom_pvs = {'VIRT:BEAM:EMITTANCES': {'type':'float', 'count': 2},
