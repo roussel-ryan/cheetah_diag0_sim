@@ -1,6 +1,6 @@
 from pcaspy import Driver
 from cheetah.particles import ParticleBeam
-from cheetah.accelerator import Segment
+from cheetah.accelerator import Segment, Screen
 import numpy as np
 import torch
 from lcls_tools.common.data.model_general_calcs import bdes_to_kmod, kmod_to_bdes
@@ -74,6 +74,7 @@ class SimDriver(Driver):
         self._lattice_file = lattice_file
 
         self.set_defaults_for_ctrl(0)
+        self.set_defaults_for_pneumatic()
 
     def set_defaults(self, enum_init_values):
         for pv, init_value in enum_init_values.items():
@@ -86,6 +87,25 @@ class SimDriver(Driver):
             if 'QUAD' in key:
                 ctrl_pv = key + ":CTRL"
                 self.setParam(ctrl_pv, default_value)
+
+    def set_defaults_for_pneumatic(self):
+        screens = { element.name: element.is_active for element
+                   in self.sim_beamline.elements if isinstance(element,Screen)
+        }
+        pprint.pprint(screens)
+
+        for screen in screens: 
+            name = self.madname_to_control(screen)
+            position = 1 if screens[screen] else 0
+            print(f"{name} : {position}")
+            pv = name + ":PNEUMATIC"
+            self.setParam(pv , position)
+            self.move_screen(name, screens[screen])
+
+    def madname_to_control(self,madname):
+        for name in self.devices:
+            if self.devices[name]["madname"] == madname:
+                return name
 
     @property
     def sim_beam(self) -> ParticleBeam:
@@ -236,27 +256,40 @@ class SimDriver(Driver):
             return image
   
     def check_screen(self, screen_name):
-        pass
-
-    def move_screen(self, screen_name: str) -> None:
-        """Toggles the in position of the associated screen"""
         names = [element.name for element in self.sim_beamline.elements]
         if screen_name in names:
             index_num = names.index(screen_name)
             is_active_position = self.sim_beamline.elements[index_num].is_active
             print(f"screen is in active position: {is_active_position}")
-            toggled = not is_active_position
-            self.sim_beamline.elements[index_num].is_active = toggled
+            return 1 if is_active_position else 0
+        else:
+            print(f"screen device not found in simulated accelerator")
+            return "OUT"
+        
+    def move_screen(self, screen_name: str, position:str) -> None:
+        """Moves the position of the associated screen"""
+        names = [element.name for element in self.sim_beamline.elements]
+        if screen_name in names:
+            index_num = names.index(screen_name)
+            is_active_position = position == "IN"
+            self.sim_beamline.elements[index_num].is_active = is_active_position
             print(f"set screen to position: {self.sim_beamline.elements[index_num].is_active}")
-        return {self.sim_beamline.elements[index_num].is_active}
+    
 
     def read(self, reason):
+        #TODO: need logic for which screen is in and out, maybe if self.screen is out and other screen is in change
+        # self.screen
+
         print(f' in read with {reason}')
         if 'Image:ArrayData' in reason and reason.rsplit(':',2)[0] == self.screen:
             print('reading screen')
             madname = self.devices[self.screen]["madname"]
             image_data = self.get_screen_distribution(screen_name = madname)
             value = image_data.flatten().tolist()
+        elif 'PNEUMATIC' in reason:
+            madname = self.devices[self.screen]["madname"]           
+            value = self.check_screen(madname)
+            print(value)      
         elif 'QUAD' in reason and 'BCTRL' in reason or 'BACT' in reason:
             quad_name = reason.rsplit(':',1)[0]
             madname = self.devices[quad_name]["madname"]
@@ -291,12 +324,10 @@ class SimDriver(Driver):
             pass
         elif 'QUAD' in reason:
             self.setParam(reason,value)
-        #TODO: deal with popping screens in and out later
-        #elif 'OTRS' in reason and 'PNEUMATIC' in reason:
-        #    screen = reason.rsplit(':',1)[0]
-        #    madname = self.devices[screen]["madname"]
-        #    position = self.move_screen(madname)
-        #    print(f"got {position}")
+        elif 'PNEUMATIC' in reason:
+            screen = reason.rsplit(':',1)[0]
+            madname = self.devices[screen]["madname"]
+            position = self.move_screen(madname)
         elif 'OTRS' in reason and 'PNEUMATIC' not in reason:
             print(f"""Write to OTRS pvs is disabled, 
                   failed to write to {reason}""")
