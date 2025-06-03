@@ -6,6 +6,7 @@ import torch
 from lcls_tools.common.data.model_general_calcs import bdes_to_kmod, kmod_to_bdes
 from scipy.stats import cauchy
 import pprint
+import math
 # TODO: set defaults for all tcav enum pvs
 #  
 class SimDriver(Driver):
@@ -227,7 +228,9 @@ class SimDriver(Driver):
         names = [element.name for element in self.sim_beamline.elements]
         if tcav_name in names:
             index_num = names.index(tcav_name)
-            self.sim_beamline.elements[index_num].phase= torch.tensor(phase_in_degrees)
+            phase_in_radians = phase_in_degrees * math.pi/180
+            print(f'phase in radians {phase_in_radians}')
+            self.sim_beamline.elements[index_num].phase= torch.tensor(phase_in_radians)
             print(f"""TCAV in segment with name {tcav_name}
                    set to {phase_in_degrees } degrees""")
             
@@ -236,12 +239,13 @@ class SimDriver(Driver):
         names = [element.name for element in self.sim_beamline.elements]
         if tcav_name in names:
             index_num = names.index(tcav_name)
-            phase = self.sim_beamline.elements[index_num].phase.item()
-            print(f"Phase in degrees is {phase}")
+            phase_in_radians = self.sim_beamline.elements[index_num].phase.item()
+            phase_in_degrees = phase_in_radians * 180 / math.pi
+            print(f"Phase in degrees is {phase_in_degrees}")
         else:
             print(f"""Warning {tcav_name} not in Segment""")
-            phase = 0
-        return phase
+            phase_in_degrees = 0.00
+        return phase_in_degrees
 
     def get_screen_distribution(self, screen_name: str)-> list[float]:
         """Retrieves image from simulation beamline and adds noise, has 
@@ -254,6 +258,8 @@ class SimDriver(Driver):
             #noise_std = 0.2 * (np.max(image) + .0001)
             #image += np.abs(np.random.normal(loc=0, scale= noise_std , size=image.shape))
             return image
+        else: 
+            print(f' else in screen probably returning none')
   
     def check_screen(self, screen_name):
         names = [element.name for element in self.sim_beamline.elements]
