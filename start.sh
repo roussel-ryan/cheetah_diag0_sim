@@ -8,7 +8,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 [ ! -f h5/impact_inj_output_YAG03.h5 ] && echo "Extracting YAG03 h5..." && xz -k -d h5/impact_inj_output_YAG03.h5.xz
 
 # Get into the rhel7 env
-source /afs/slac/g/lcls/package/anaconda/envs/rhel7_devel/bin/activate
+if [ -f /afs/slac/g/lcls/package/anaconda/envs/rhel7_devel/bin/activate ]; then
+	source /afs/slac/g/lcls/package/anaconda/envs/rhel7_devel/bin/activate
+fi
 
 # Setup epics vars
 source epics-env.sh
