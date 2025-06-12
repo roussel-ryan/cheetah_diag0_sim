@@ -18,3 +18,4 @@ dependencies:
   - pip:
     - git+https://github.com/slaclab/ml-tto
     - git+https://github.com/desy-ml/cheetah
+    - p4p
