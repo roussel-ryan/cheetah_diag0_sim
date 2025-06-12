@@ -31,7 +31,9 @@ def create_pvdb(device: dict, **default_params) -> dict:
             screen_params = {
                 get_pv('image'): {
                     'type': 'float',
-                    'count': n_row * n_col
+                    'count': n_row * n_col,
+                    'n_row': n_row,
+                    'n_col': n_col,
                 },
                 get_pv('n_row'): {
                     'type': 'int',

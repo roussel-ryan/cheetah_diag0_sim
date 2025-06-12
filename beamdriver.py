@@ -1,4 +1,4 @@
-from pcaspy import Driver
+from pcaspy import Driver, SimpleServer
 from cheetah.particles import ParticleBeam
 from cheetah.accelerator import Segment, Screen
 import numpy as np
@@ -7,10 +7,249 @@ from lcls_tools.common.data.model_general_calcs import bdes_to_kmod, kmod_to_bde
 from scipy.stats import cauchy
 import pprint
 import math
+from p4p.server.thread import SharedPV
+from p4p.nt import NTScalar, NTNDArray, NTEnum
+import p4p
+from typing import Dict, Callable, Any
+
+class SimServer(SimpleServer):
+    """
+    Subclass of pcaspy.SimpleServer that also serves PVs via PVA
+    """
+
+    PV_ASSOC = {
+        'HOPR': 'display.limitHigh',
+        'LOPR': 'display.limitLow',
+        'DESC': 'display.description',
+        'EGU': 'display.units'
+    }
+
+    DB_TO_PV = {
+        'unit': 'EGU',
+        'value': 'VAL',
+        'lopr': 'LOPR',
+        'hopr': 'HOPR',
+        'prec': 'PREC',
+    }
+
+    class UpdateHandler:
+        """
+        Handler for PV writes. Invokes the update callback to update the model outputs.
+        This also maintains an association between a PV and a subfield in the parent PV. For example,
+        if we have a .LOPR pv, that also needs to update the display.limitLow field in the parent.
+        """
+        def __init__(self, server, parent: SharedPV|None=None, subfield: str|None=None):
+            self.server = server
+            self._parent = parent
+            self._subfield = subfield
+
+        def put(self, pv, op):
+            pv.post(op.value())
+            op.done()
+
+            # Update the parent PV's subfield too
+            if self._parent:
+                val = self._parent._wrap(self._parent.current())
+                val[self._subfield] = op.value()
+                self._parent.post(val)
+
+            if self.server._callback:
+                self.server._callback(op.name(), op.value())
+
+    def __init__(self, pvdb: dict, prefix: str = ''):
+        """
+        Parameters
+        ----------
+        pvdb : dict
+            Dict describing all records and their fields
+        prefix : str
+            PV name prefix
+        """
+        self._pva: Dict[str, SharedPV] = {}
+        self._callback = None
+        self._db = pvdb
+
+        # Create CA PVs
+        self.createPV(prefix, pvdb)
+
+        # Create PVA PVs
+        for k, v in pvdb.items():
+            self._pva.update(self._build_pv(f'{prefix}{k}', v))
+
+        super().__init__()
+
+    def set_update_callback(self, callable: Callable[[str, Any], None]):
+        """
+        Sets the callback to be called every 0.1s in the processing loop (corresponds to fastest EPICS processing time)
+
+        Parameters
+        ----------
+        callable : Callable
+            Method to use, or none to clear
+        """
+        self._callback = callable
+
+    def run(self):
+        self._server = p4p.server.Server(providers=[self._pva])
+        while True:
+            self.process(0.1)
+
+    @property
+    def pva_pvs(self) -> Dict[str, SharedPV]:
+        """Returns list of PVs served by PVA"""
+        return self._pva
+
+    @property
+    def pvdb(self) -> dict:
+        """Returns the PV database"""
+        return self.pvdb
+
+    def _type_desc(self, t) -> str:
+        """
+        Returns the type description of t for use with NTScalar and friends
+
+        Parameters
+        ----------
+        t : Any
+            object to describe
+
+        Returns
+        -------
+        str
+            Type code for use with NTScalar
+        """
+        if isinstance(t, int):
+            return 'i'
+        elif isinstance(t, float):
+            return 'd'
+        elif isinstance(t, bool):
+            return '?'
+        elif isinstance(t, str):
+            return 's'
+        else:
+            raise Exception(f'Unsupported type {type(t)}')
+
+    def _db_to_pv(self, name: str) -> str:
+        """Convert pvdb field name to real EPICS field name"""
+        try:
+            return self.DB_TO_PV[name]
+        except:
+            raise ValueError(f'Unknown field name {name}, please add it to DB_TO_PV!')
+
+    def _pv_assoc(self, field: str) -> str|None:
+        """Returns the field association with a NT field in the parent, if any"""
+        try:
+            return self.PV_ASSOC[field.upper()]
+        except:
+            return None
+
+    def _build_pv(self, name: str, desc: dict) -> Dict[str, SharedPV]:
+        """
+        Builds several PVs to form the record described by 'desc'
+
+        Parameters
+        ----------
+        name : str
+            PV base name
+        desc : dict
+            Description ordinarily passed to pcaspy
+
+        Returns
+        -------
+        Dict[str, SharedPV]
+            Dict mapping PV name -> SharedPV instance
+        """
+        r = {}
+        if not 'type' in desc:
+            desc['type'] = 'float'
+
+        is_image = False
+        match desc['type']:
+            case 'enum':
+                nt = NTEnum(control=True, display=True, valueAlarm=True)
+                default = {
+                    'index': desc['value'] if 'value' in desc else 0,
+                    'choices': desc['enums']
+                }
+            case 'int':
+                nt = NTScalar('i', control=True, display=True, valueAlarm=True)
+                default = desc['value'] if 'value' in desc else 0
+            case 'float':
+                # If we have count, it's actually an array (image)
+                if 'count' in desc and 'n_col' in desc:
+                    default = np.zeros((desc['n_col'], desc['n_row']), dtype=float)
+                    nt = NTNDArray()
+                    is_image=True
+                else:
+                    nt = NTScalar('d', control=True, display=True, valueAlarm=True)
+                    default = float(desc['value']) if 'value' in desc else 0.0
+            case _:
+                raise Exception(f'Unhandled type "{desc["type"]}"')
+
+        # Special control fields
+        controls = ['enums', 'type', 'value', 'count', 'n_col', 'n_row']
+
+        # Add value field
+        val_pv = SharedPV(
+            nt=nt,
+            initial=default,
+            handler=SimServer.UpdateHandler(self),
+        )
+        r[f'{name}.VAL'] = val_pv
+        r[f'{name}'] = val_pv
+
+        # Get a Value out of SharedPV
+        if desc['type'] != 'enum' and not is_image:
+            cur = nt.wrap(val_pv.current())
+        else:
+            cur = None
+
+        # Build generic fields
+        for k, v in desc.items():
+            if k in controls:
+                continue # Skip special values
+
+            field = self._db_to_pv(k.lower())
+
+            # Determine any association with the "parent" (value) PV
+            sub = self._pv_assoc(k)
+            par_pv = val_pv if sub else None
+
+            # Build a PV for each field
+            r[f'{name}.{k.upper()}'] = SharedPV(
+                nt=NTScalar(self._type_desc(v)),
+                initial=v,
+                handler=SimServer.UpdateHandler(self, parent=par_pv, subfield=sub)
+            )
+
+            if sub and cur:
+                cur[sub] = v
+
+        # Post the "real" value to the value PV, including all fields
+        if cur:
+            val_pv.post(cur)
+
+        return r
+
+    def set_pv(self, name: str, value):
+        """
+        Update a PVA PV with a new value
+        
+        Parameters
+        ----------
+        name : str
+            Full name of PV including field
+        value : Any
+            Value to set
+        """
+        self._pva[name].post(value)
+
 # TODO: set defaults for all tcav enum pvs
 #  
 class SimDriver(Driver):
-    def __init__(self, screen: str,
+    def __init__(self,
+                 server: SimServer,
+                 screen: str,
                  devices: dict,
                  design_incoming_beam:dict = None,
                  particle_beam: ParticleBeam = None,
@@ -19,8 +258,7 @@ class SimDriver(Driver):
                  enum_init_values: dict = None):
         super().__init__()
 
-
-
+        self.server = server
         self.devices = devices
         #pprint.pprint(devices)
         '''
@@ -77,9 +315,33 @@ class SimDriver(Driver):
         self.set_defaults_for_ctrl(0)
         self.set_defaults_for_pneumatic()
 
+        # Do an initial evaluation with default values
+        self._update_all_outputs()
+        self.server.set_update_callback(self._on_update)
+
+    def _update_all_outputs(self):
+        """Updates all model outputs after an input was written to"""
+        for k in self.server.pva_pvs.keys():
+            # Skip PVs that have a field suffix, we only care about the 'main' PV
+            if '.' in k:
+                continue
+            try:
+                self.read(k)
+            except:
+                pass
+
+    def _on_update(self, reason: str | None, value):
+        """Updates the model outputs with new values, and updates PVA PVs"""
+        self.write(reason, value)
+        self._update_all_outputs()
+
+    def set_param(self, reason, value):
+        self.setParam(reason, value)
+        self.server.set_pv(reason, value)
+
     def set_defaults(self, enum_init_values):
         for pv, init_value in enum_init_values.items():
-            self.setParam(pv, init_value)
+            self.set_param(pv, init_value)
     
     def set_defaults_for_ctrl(self,default_value: int )->None:
         """Sets default quad ctrl value to ready state"""
@@ -87,7 +349,7 @@ class SimDriver(Driver):
         for key in keys:
             if 'QUAD' in key:
                 ctrl_pv = key + ":CTRL"
-                self.setParam(ctrl_pv, default_value)
+                self.set_param(ctrl_pv, default_value)
 
     def set_defaults_for_pneumatic(self):
         screens = { element.name: element.is_active for element
@@ -100,7 +362,7 @@ class SimDriver(Driver):
             position = 1 if screens[screen] else 0
             print(f"{name} : {position}")
             pv = name + ":PNEUMATIC"
-            self.setParam(pv , position)
+            self.set_param(pv , position)
             self.move_screen(name, screens[screen])
 
     def madname_to_control(self,madname):
@@ -247,7 +509,7 @@ class SimDriver(Driver):
             phase_in_degrees = 0.00
         return phase_in_degrees
 
-    def get_screen_distribution(self, screen_name: str)-> list[float]:
+    def get_screen_distribution(self, screen_name: str)-> torch.Tensor:
         """Retrieves image from simulation beamline and adds noise, has 
         a bug that the first time is called is not addding noise"""
         self.sim_beamline.track(self.sim_beam)
@@ -295,7 +557,7 @@ class SimDriver(Driver):
         elif 'PNEUMATIC' in reason:
             madname = self.devices[self.screen]["madname"]           
             value = self.check_screen(madname)
-            print(value)      
+            print(value)
         elif 'QUAD' in reason and 'BCTRL' in reason or 'BACT' in reason:
             quad_name = reason.rsplit(':',1)[0]
             madname = self.devices[quad_name]["madname"]
@@ -319,6 +581,9 @@ class SimDriver(Driver):
             value = [self.sim_beam.sigma_x,self.sim_beam.sigma_y]
         else:
             value = self.getParam(reason)
+
+        # Post PVA changes
+        self.server.set_pv(reason, value)
         return value
 
     def write(self, reason, value):
@@ -329,7 +594,7 @@ class SimDriver(Driver):
         elif 'QUAD' in reason and 'BACT' in reason:
             pass
         elif 'QUAD' in reason:
-            self.setParam(reason,value)
+            self.set_param(reason,value)
         elif 'PNEUMATIC' in reason:
             screen = reason.rsplit(':',1)[0]
             madname = self.devices[screen]["madname"]
@@ -347,6 +612,7 @@ class SimDriver(Driver):
             self.set_tcav_phase(madname,value)
         elif 'VIRT:BEAM:RESET_SIM' == reason:
             self.reset_sim()
+        self._update_all_outputs()
 
 
 #TODO: add functionality to pop screens in and out
