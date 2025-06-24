@@ -1,32 +1,42 @@
-Simulated Linac using Cheetah and PCASpy
+# Simulated Linac using Cheetah and PCASpy
 
 This project provides a simulated EPICS server that hosts PVs using PCASpy. The simulation is designed to work with the Cheetah accelerator framework and includes examples for interfacing with the lcls-tools.
 
-Setup Instructions
+## Setup Instructions
 
 To set up and run the simulated server, follow these steps:
 
-Create the environment:
+### Setting up the environment:
 
-conda env create -f environment.yml
+```sh 
+$ conda env create -f environment.yml
+$ conda activate linac-simulation
+```
 
-Activate the environment:
+### Run the simulated server:
 
-conda activate linac-simulation
+```
+$ ./start.sh
+```
 
-Source the setup script:
+### Acessing PVs
 
-source setup.sh
+The epics-env.sh script will setup your environment appropriately to access the PVs exported by the server.
 
-Run the simulated server:
+Make sure you source this script before attempting to access PVs using caget/pvget, or tools like Badger.
 
-python simulated_server.py
+```
+$ source epics-env.sh
+```
 
-Examples:
+It is _not_ necessary to source this script before running `start.sh`, as that setup is handled automatically by `start.sh`
+
+
+## Examples:
 
 This repository includes example scripts demonstrating how to interface with the simulated EPICS server using the lcls-tools module, which is available in the provided environment. These examples illustrate how to read from and write to process variables (PVs).
 
-Dependencies:
+## Dependencies:
 
 The required dependencies are listed in environment.yml, ensuring a reproducible setup. The environment includes:
 
@@ -36,9 +46,10 @@ Cheetah for beam simulation
 
 lcls-tools for interfacing with EPICS
 
-Notes:
+## Additional Notes
 
-Ensure that all dependencies are installed properly and that the setup script is sourced before running the server to avoid missing environment variables or paths.
+Ensure that all dependencies are installed properly and that the `epics-env.sh` script is sourced before trying to access PVs exported by the server. Otherwise, you may unexpectedly
+access PVs exported by real IOCs on the DEV or PROD networks (depending on your gateway settings).
 
 For any issues, verify that the required environment is activated and that caget and caput can communicate with the hosted PVs.
 
