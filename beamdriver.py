@@ -20,8 +20,10 @@ class SimServer(SimpleServer):
     PV_ASSOC = {
         'HOPR': 'display.limitHigh',
         'LOPR': 'display.limitLow',
+        'DRVH': 'control.limitHigh',
+        'DRVL': 'control.limitLow',
         'DESC': 'display.description',
-        'EGU': 'display.units'
+        'EGU': 'display.units',
     }
 
     DB_TO_PV = {
@@ -30,6 +32,8 @@ class SimServer(SimpleServer):
         'lopr': 'LOPR',
         'hopr': 'HOPR',
         'prec': 'PREC',
+        'drvh': 'DRVH',
+        'drvl': 'DRVL'
     }
 
     class UpdateHandler:
@@ -74,6 +78,8 @@ class SimServer(SimpleServer):
 
         # Create PVA PVs
         for k, v in pvdb.items():
+            if k.rfind('.') != -1:
+                continue
             self._pva.update(self._build_pv(f'{prefix}{k}', v))
 
         super().__init__()
@@ -548,6 +554,10 @@ class SimDriver(Driver):
         #TODO: need logic for which screen is in and out, maybe if self.screen is out and other screen is in change
         # self.screen
 
+        # For non-simulated PVs, read the value directly
+        if reason.rfind('.') != -1:
+            return self.getParam(reason)
+
         print(f' in read with {reason}')
         if 'Image:ArrayData' in reason and reason.rsplit(':',2)[0] == self.screen:
             print('reading screen')
@@ -600,7 +610,7 @@ class SimDriver(Driver):
             madname = self.devices[screen]["madname"]
             position = self.move_screen(madname)
         elif 'OTRS' in reason and 'PNEUMATIC' not in reason:
-            print(f"""Write to OTRS pvs is disabled, 
+            print(f"""Write to OTRS pvs is disabled,
                   failed to write to {reason}""")
         elif 'TCAV' in reason and 'AREQ' in reason:
             tcav_name = reason.rsplit(':',1)[0]

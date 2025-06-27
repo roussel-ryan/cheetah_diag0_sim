@@ -12,17 +12,27 @@ def create_pvdb(device: dict, **default_params) -> dict:
 
         if 'QUAD' in key:
             quad_params = {
-                get_pv('bact'): {'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20},
-                get_pv('bctrl'): {'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20},
-                get_pv('bmax'): {'value': 20.0, 'prec': 5},
-                get_pv('bmin'): {'value': -20.0, 'prec': 5},
-                get_pv('bdes'): {'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20},
-                get_pv('bcon'): {'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20},
+                get_pv('bact'): {'type': 'float', 'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20, 'drvh': 20, 'drvl': -20},
+                get_pv('bctrl'): {'type': 'float', 'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20, 'drvh': 20, 'drvl': -20},
+                get_pv('bmax'): {'type': 'float', 'value': 20.0, 'prec': 5},
+                get_pv('bmin'): {'type': 'float', 'value': -20.0, 'prec': 5},
+                get_pv('bdes'): {'type': 'float', 'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20, 'drvh': 20, 'drvl': -20},
+                get_pv('bcon'): {'type': 'float', 'value': 0.0, 'prec': 5, 'hopr': 20, 'lopr': -20, 'drvh': 20, 'drvl': -20},
                 get_pv('ctrl'): {
                     'type': 'enum',
                     'enums': ['Ready', 'TRIM', 'Perturb', 'MORE_IF_NEEDED']
                 }
             }
+
+            # Create DRVL/DRVH/HOPR/LOPR PVs, since pcaspy doesn't do that for us.
+            new_pvs = {}
+            for k, v in quad_params.items():
+                for parm, val in v.items():
+                    if parm in ['type', 'value']:
+                        continue
+                    new_pvs[f'{k}.{parm.upper()}'] = {'type': 'float', 'value': val}
+            quad_params.update(new_pvs)
+
             pvdb.update(quad_params)
 
         elif 'OTRS' in key:
