@@ -8,7 +8,10 @@ To set up and run the simulated server, follow these steps:
 
 ### Setting up the environment:
 
-```sh 
+```sh
+$ git clone https://github.com/slaclab/Linac-Simulation-Server.git
+$ cd Linac-Simulation-Server/yaml_configs
+$ source /sdf/group/cds/sw/epics/users/ernesto/sandbox/ML_Physics/conda-local-activate.sh
 $ conda env create -f environment.yml
 $ conda activate linac-simulation
 ```
@@ -19,18 +22,29 @@ $ conda activate linac-simulation
 $ ./start.sh
 ```
 
-### Acessing PVs
+### Accessing PVs
 
-The epics-env.sh script will setup your environment appropriately to access the PVs exported by the server.
+On a separate terminal, the epics-env.sh script will setup your environment appropriately to access the PVs exported by the server.
 
 Make sure you source this script before attempting to access PVs using caget/pvget, or tools like Badger.
 
 ```
+$ cd Linac-Simulation-Server/
 $ source epics-env.sh
 ```
+It is _not_ necessary to source epics_env.sh before running `start.sh`, as that setup is handled automatically by `start.sh`
 
-It is _not_ necessary to source this script before running `start.sh`, as that setup is handled automatically by `start.sh`
+#### Badger
 
+```
+$ source /sdf/sw/epics/package/anaconda/envs/rhel7_devel/bin/activate
+$ cd Badger-Resources/cu_hxr
+$ badger -g -cf config.yaml
+```
+
+Please update config.yaml with correct paths. 
+
+**Warning** Not all PVs are currently supported in the Linac Simulation Server.
 
 ## Examples:
 
@@ -54,4 +68,3 @@ access PVs exported by real IOCs on the DEV or PROD networks (depending on your 
 For any issues, verify that the required environment is activated and that caget and caput can communicate with the hosted PVs.
 
 You will also need to provide your own beam distribution (this setup is designed to run on the LCLS-I Cu Injector)
-
