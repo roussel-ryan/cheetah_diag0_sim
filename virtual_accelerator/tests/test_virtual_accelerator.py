@@ -38,9 +38,9 @@ class TestVirtualAccelerator:
         self.va.set_pvs(values)
 
         # Verify that the values were set correctly
-        assert getattr(
-            self.va.lattice, self.va.mapping["QUAD:DIAG0:190"].lower()
-        ).k1 == torch.tensor(0.5)
+        assert getattr(self.va.lattice, self.va.mapping["QUAD:DIAG0:190"].lower())[
+            0
+        ].k1 == torch.tensor(0.5)
         assert getattr(
             self.va.lattice, self.va.mapping["XCOR:DIAG0:178"].lower()
         ).angle == torch.tensor(0.1)
