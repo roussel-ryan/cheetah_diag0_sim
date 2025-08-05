@@ -15,7 +15,7 @@ class FieldAccessor:
         self.get = getter
         self.set = setter
 
-    def __call__(self, element, value=None):
+    def __call__(self, element, energy, value=None):
         if value is None:
             return self.get(element)
         else:
@@ -24,11 +24,45 @@ class FieldAccessor:
             self.set(element, value)
 
 
-QUADRUPOLE_MAPPING = {"BCTRL": "k1", "BACT": "k1"}
+def get_magnetic_rigidity(energy):
+    """
+    Calculate the magnetic rigidity (Bρ) in kG-m given the beam energy in eV.
+    """
+    return 33.356 * energy / 1e9
 
-SOLENOID_MAPPING = {"BCTRL": "k", "BACT": "k"}
 
-CORRECTOR_MAPPING = {"BCTRL": "angle", "BACT": "angle"}
+class MagneticFieldAccessor(FieldAccessor):
+    """
+    A class to access and set magnetic field attributes of Cheetah elements,
+    converting between the field value and the corresponding angle or k1 value
+    based on the beam energy.
+
+    """
+
+    def __call__(self, element, energy, value=None):
+        if value is None:
+            return self.get(element) * get_magnetic_rigidity(energy)
+        else:
+            if self.set is None:
+                raise ValueError("Cannot set value for.")
+            self.set(element, value / get_magnetic_rigidity(energy))
+
+# define mappings for different element types 
+# -- include conversions for cheetah attributes to SLAC EPICS attributes
+QUADRUPOLE_MAPPING = {
+    "BCTRL": MagneticFieldAccessor(lambda e: e.k1, lambda e, k1: setattr(e, "k1", k1)),
+    "BACT": MagneticFieldAccessor(lambda e: e.k1)
+}
+
+SOLENOID_MAPPING = {
+    "BCTRL": MagneticFieldAccessor(lambda e: e.k, lambda e, k: setattr(e, "k", k)),
+    "BACT": MagneticFieldAccessor(lambda e: e.k)
+}
+
+CORRECTOR_MAPPING = {
+    "BCTRL": MagneticFieldAccessor(lambda e: e.angle, lambda e, a: setattr(e, "angle", a)),
+    "BACT": MagneticFieldAccessor(lambda e: e.angle)
+}
 
 TRANSVERSE_DEFLECTING_CAVITY_MAPPING = {
     "AREQ": "voltage",
@@ -59,7 +93,7 @@ MAPPINGS = {
 }
 
 
-def access_cheetah_attribute(element, pv_attribute, set_value=None):
+def access_cheetah_attribute(element, pv_attribute, energy, set_value=None):
     """
 
     Return or set a Cheetah element attribute based on the PV attribute.
@@ -68,6 +102,7 @@ def access_cheetah_attribute(element, pv_attribute, set_value=None):
     Args:
         element (Element): The name of the Cheetah element.
         pv_attribute (str): The process variable attribute to map.
+        energy (float): The beam energy in eV.
         set_value (optional): If provided, sets the value of the Cheetah attribute.
 
     Returns:
@@ -97,7 +132,7 @@ def access_cheetah_attribute(element, pv_attribute, set_value=None):
             setattr(element, accessor, set_value)
 
     elif isinstance(accessor, FieldAccessor):
-        return accessor(element, set_value)
+        return accessor(element, energy, set_value)
 
 
 def get_pv_mad_mapping(fname):
@@ -108,5 +143,9 @@ def get_pv_mad_mapping(fname):
         fname (str): Path to the CSV file containing the mapping.
 
     """
-    mapping = pd.read_csv(fname, dtype=str).set_index("Control System Name")["Element"].T.to_dict()
+    mapping = (
+        pd.read_csv(fname, dtype=str)
+        .set_index("Control System Name")["Element"]
+        .T.to_dict()
+    )
     return mapping

@@ -1,4 +1,6 @@
 from cheetah.accelerator import Segment
+from cheetah.particles import ParticleBeam
+import torch
 from virtual_accelerator.pv_mapping import access_cheetah_attribute, get_pv_mad_mapping
 
 
@@ -11,6 +13,22 @@ class VirtualAccelerator:
         # do a first run to populate readings
         self.lattice.track(incoming=self.initial_beam_distribution)
 
+    def get_energy(self):
+        """
+        Get the energy of the beam in the virtual accelerator simulator at
+        every element for use in calculating the magnetic rigidity.
+        """
+        test_beam = ParticleBeam(
+            torch.zeros(6), energy=self.initial_beam_distribution.energy
+        )
+        element_names = [e.name for e in self.lattice.elements]
+        return dict(
+            zip(
+                element_names,
+                self.lattice.get_beam_attrs_along_segment(("energy",), test_beam),
+            )
+        )
+
     def set_pvs(self, values: dict):
         """
         Set the corresponding process variable (PV) to the given value on the virtual accelerator simulator.
@@ -21,24 +39,31 @@ class VirtualAccelerator:
             base_pv_name = ":".join(pv_name.split(":")[:3])
             attribute_name = ":".join(pv_name.split(":")[3:])
 
+            # get the beam energy along the lattice
+            beam_energy_along_lattice = self.get_energy()
+
             # check if the pv_name is a control variable
             if base_pv_name in self.mapping:
                 # set the value in the virtual accelerator simulator
                 element = getattr(self.lattice, self.mapping[base_pv_name].lower())
+
+                # get the beam energy for the element
+                energy = beam_energy_along_lattice[self.mapping[base_pv_name].lower()]
 
                 # if there are duplicate elements, just grab the first one (both will be adjusted)
                 if isinstance(element, list):
                     element = element[0]
 
                 try:
-                    access_cheetah_attribute(element, attribute_name, value)
+                    access_cheetah_attribute(element, attribute_name, energy, value)
                 except ValueError as e:
                     raise ValueError(f"Failed to set PV {pv_name}: {str(e)}") from e
 
             else:
                 raise ValueError(f"Invalid PV base name: {base_pv_name}")
 
-        # at the end of setting all PVs, run the simulation
+        # at the end of setting all PVs, run the simulation with the initial beam distribution
+        # this will update all readings (screens, BPMs, etc.) in the lattice
         self.lattice.track(incoming=self.initial_beam_distribution)
 
     def get_pvs(self, pv_names: list):
@@ -52,15 +77,23 @@ class VirtualAccelerator:
             base_pv_name = ":".join(pv_name.split(":")[:3])
             attribute_name = ":".join(pv_name.split(":")[3:])
 
+            # get the beam energy along the lattice
+            beam_energy_along_lattice = self.get_energy()
+
             # check if the pv_name is a control variable
             if base_pv_name in self.mapping:
                 element = getattr(self.lattice, self.mapping[base_pv_name].lower())
+                # get the beam energy for the element
+                energy = beam_energy_along_lattice[self.mapping[base_pv_name].lower()]
 
                 # if there are duplicate elements, just grab the first one (both will be adjusted)
                 if isinstance(element, list):
                     element = element[0]
 
-                values[pv_name] = access_cheetah_attribute(element, attribute_name)
+                values[pv_name] = access_cheetah_attribute(
+                    element, attribute_name, energy
+                )
+
             else:
                 raise ValueError(f"Invalid PV base name: {base_pv_name}")
 

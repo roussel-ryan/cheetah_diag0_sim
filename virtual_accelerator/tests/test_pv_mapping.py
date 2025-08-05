@@ -50,27 +50,31 @@ class TestPVMapping:
         # Set values for various PVS
         values = {
             "quad1:BCTRL": 0.5,
-            "hcor1:BACT": 0.1,
-            "vcor1:BACT": 0.2,
+            "hcor1:BCTRL": 0.1,
+            "vcor1:BCTRL": 0.2,
             "tcav1:AREQ": 1.0,
             "tcav1:PREQ": 45.0,
         }
+        energy = 2e9 / 33.356  # energy in eV such that the magnetic rigidity is 2 kG-m
 
         for name, value in values.items():
             base_pv_name = name.split(":")[0]
             attribute_name = name.split(":")[1]
 
             element = getattr(self.lattice, base_pv_name)
-            access_cheetah_attribute(element, attribute_name, value)
+            access_cheetah_attribute(element, attribute_name, energy, value)
 
         # Verify that the values were set correctly
-        assert torch.isclose(self.lattice.quad1.k1, torch.tensor(0.5))
-        assert torch.isclose(self.lattice.hcor1.angle, torch.tensor(0.1))
-        assert torch.isclose(self.lattice.vcor1.angle, torch.tensor(0.2))
+        assert torch.isclose(self.lattice.quad1.k1, torch.tensor(0.5) / 2)
+        assert torch.isclose(self.lattice.hcor1.angle, torch.tensor(0.1) / 2)
+        assert torch.isclose(self.lattice.vcor1.angle, torch.tensor(0.2) / 2)
 
         # try setting something that cannot be set
         values = {
             "bpm1:XSCDT1H": 0.5,
+            "quad1:BACT": 0.3,
+            "hcor1:BACT": 0.4,
+            "vcor1:BACT": 0.5,
             "screen1:Image:ArrayData": [1, 2, 3],
             "screen1:RESOLUTION": [0.1, 0.1],
             "screen1:Image:ArraySize2_RBV": [4, 5],
@@ -83,7 +87,7 @@ class TestPVMapping:
             element = getattr(self.lattice, base_pv_name)
 
             with pytest.raises(ValueError):
-                access_cheetah_attribute(element, attribute_name, value)
+                access_cheetah_attribute(element, attribute_name, energy, value)
 
     def test_get_pvs(self):
         # Get values for various PVS
@@ -96,12 +100,13 @@ class TestPVMapping:
             "tcav1:AREQ": 0.0,
             "tcav1:PREQ": 45.0,
         }
+        energy = 1e9 / 33.356  # energy in eV such that the magnetic rigidity is 1 kG-m
 
         for pv_name, expected_value in pv_name_values.items():
             base_pv_name = pv_name.split(":")[0]
             attribute_name = ":".join(pv_name.split(":")[1:])
 
             element = getattr(self.lattice, base_pv_name)
-            result = access_cheetah_attribute(element, attribute_name)
+            result = access_cheetah_attribute(element, attribute_name, energy)
 
             assert torch.isclose(torch.tensor(result), torch.tensor(expected_value))
