@@ -35,7 +35,7 @@ class MagneticFieldAccessor(FieldAccessor):
     """
     A class to access and set magnetic field attributes of Cheetah elements,
     converting between the field value and the corresponding angle or k1 value
-    based on the beam energy.
+    based on the beam energy in eV.
 
     """
 
@@ -45,18 +45,18 @@ class MagneticFieldAccessor(FieldAccessor):
         else:
             if self.set is None:
                 raise ValueError("Cannot set value for.")
-            self.set(element, value / get_magnetic_rigidity(energy))
+            self.set(element, value )
 
 # define mappings for different element types 
 # -- include conversions for cheetah attributes to SLAC EPICS attributes
 QUADRUPOLE_MAPPING = {
-    "BCTRL": MagneticFieldAccessor(lambda e: e.k1, lambda e, k1: setattr(e, "k1", k1)),
-    "BACT": MagneticFieldAccessor(lambda e: e.k1)
+    "BCTRL": MagneticFieldAccessor(lambda e, energy: e.k1 * e.length * get_magnetic_rigidity(energy), lambda e, energy, k1: setattr(e, "k1", k1 / get_magnetic_rigidity(energy) / e.length)),
+    "BACT": MagneticFieldAccessor(lambda e, energy: e.k1 * e.length * get_magnetic_rigidity(energy))
 }
 
 SOLENOID_MAPPING = {
-    "BCTRL": MagneticFieldAccessor(lambda e: e.k, lambda e, k: setattr(e, "k", k)),
-    "BACT": MagneticFieldAccessor(lambda e: e.k)
+    "BCTRL": MagneticFieldAccessor(lambda e, energy: e.k * get_magnetic_rigidity(energy), lambda e, energy, k: setattr(e, "k", k / get_magnetic_rigidity(energy))),
+    "BACT": MagneticFieldAccessor(lambda e, energy: e.k * get_magnetic_rigidity(energy))
 }
 
 CORRECTOR_MAPPING = {
