@@ -5,10 +5,22 @@ from virtual_accelerator.pv_mapping import access_cheetah_attribute, get_pv_mad_
 
 
 class VirtualAccelerator:
-    def __init__(self, lattice_file, mapping_file, initial_beam_distribution):
+    def __init__(
+        self,
+        lattice_file,
+        mapping_file,
+        initial_beam_distribution,
+        beam_shutter_pv=None,
+    ):
         self.lattice = Segment.from_lattice_json(lattice_file)
         self.mapping = get_pv_mad_mapping(mapping_file)
         self.initial_beam_distribution = initial_beam_distribution
+        self.initial_beam_distribution_charge = (
+            initial_beam_distribution.particle_charges
+        )
+
+        # store the beam shutter PV name
+        self.beam_shutter_pv = beam_shutter_pv
 
         # do a first run to populate readings
         self.lattice.track(incoming=self.initial_beam_distribution)
@@ -19,15 +31,30 @@ class VirtualAccelerator:
         every element for use in calculating the magnetic rigidity.
         """
         test_beam = ParticleBeam(
-            torch.zeros(6), energy=self.initial_beam_distribution.energy
+            torch.zeros(1, 7), energy=self.initial_beam_distribution.energy
         )
         element_names = [e.name for e in self.lattice.elements]
         return dict(
             zip(
                 element_names,
-                self.lattice.get_beam_attrs_along_segment(("energy",), test_beam),
+                self.lattice.get_beam_attrs_along_segment(("energy",), test_beam)[0],
             )
         )
+
+    def set_shutter(self, value: bool):
+        """
+        Set the beam shutter state in the virtual accelerator simulator.
+        If `value` is True, the shutter is closed (no beam), otherwise it is open (beam present).
+        """
+        if value:
+            self.initial_beam_distribution.particle_charges = torch.tensor(0.0)
+        else:
+            self.initial_beam_distribution.particle_charges = (
+                self.initial_beam_distribution_charge
+            )
+
+        # run the simulation to update readings
+        self.lattice.track(incoming=self.initial_beam_distribution)
 
     def set_pvs(self, values: dict):
         """
@@ -35,11 +62,16 @@ class VirtualAccelerator:
         """
 
         for pv_name, value in values.items():
+            # handle the beam shutter separately
+            if pv_name == self.beam_shutter_pv:
+                self.set_shutter(value)
+                continue
+
             # get the base pv name
             base_pv_name = ":".join(pv_name.split(":")[:3])
             attribute_name = ":".join(pv_name.split(":")[3:])
 
-            # get the beam energy along the lattice
+            # get the beam energy along the lattice -- returns a dict of element names to energies
             beam_energy_along_lattice = self.get_energy()
 
             # check if the pv_name is a control variable
@@ -73,6 +105,13 @@ class VirtualAccelerator:
 
         values = {}
         for pv_name in pv_names:
+            # handle the beam shutter separately
+            if pv_name == self.beam_shutter_pv:
+                values[pv_name] = (
+                    self.initial_beam_distribution.particle_charges.item() == 0.0
+                )
+                continue
+
             # get the base pv name
             base_pv_name = ":".join(pv_name.split(":")[:3])
             attribute_name = ":".join(pv_name.split(":")[3:])
