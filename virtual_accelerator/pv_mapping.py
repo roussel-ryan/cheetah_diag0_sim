@@ -30,38 +30,21 @@ def get_magnetic_rigidity(energy):
     """
     return 33.356 * energy / 1e9
 
-
-class MagneticFieldAccessor(FieldAccessor):
-    """
-    A class to access and set magnetic field attributes of Cheetah elements,
-    converting between the field value and the corresponding angle or k1 value
-    based on the beam energy in eV.
-
-    """
-
-    def __call__(self, element, energy, value=None):
-        if value is None:
-            return self.get(element) * get_magnetic_rigidity(energy)
-        else:
-            if self.set is None:
-                raise ValueError("Cannot set value for.")
-            self.set(element, value )
-
 # define mappings for different element types 
 # -- include conversions for cheetah attributes to SLAC EPICS attributes
 QUADRUPOLE_MAPPING = {
-    "BCTRL": MagneticFieldAccessor(lambda e, energy: e.k1 * e.length * get_magnetic_rigidity(energy), lambda e, energy, k1: setattr(e, "k1", k1 / get_magnetic_rigidity(energy) / e.length)),
-    "BACT": MagneticFieldAccessor(lambda e, energy: e.k1 * e.length * get_magnetic_rigidity(energy))
+    "BCTRL": FieldAccessor(lambda e, energy: e.k1 * e.length * get_magnetic_rigidity(energy), lambda e, energy, k1: setattr(e, "k1", k1 / get_magnetic_rigidity(energy) / e.length)),
+    "BACT": FieldAccessor(lambda e, energy: e.k1 * e.length * get_magnetic_rigidity(energy))
 }
 
 SOLENOID_MAPPING = {
-    "BCTRL": MagneticFieldAccessor(lambda e, energy: e.k * get_magnetic_rigidity(energy), lambda e, energy, k: setattr(e, "k", k / get_magnetic_rigidity(energy))),
-    "BACT": MagneticFieldAccessor(lambda e, energy: e.k * get_magnetic_rigidity(energy))
+    "BCTRL": FieldAccessor(lambda e, energy: e.k * get_magnetic_rigidity(energy), lambda e, energy, k: setattr(e, "k", k / (2*get_magnetic_rigidity(energy)))),
+    "BACT": FieldAccessor(lambda e, energy: e.k * get_magnetic_rigidity(energy))
 }
 
 CORRECTOR_MAPPING = {
-    "BCTRL": MagneticFieldAccessor(lambda e: e.angle, lambda e, a: setattr(e, "angle", a)),
-    "BACT": MagneticFieldAccessor(lambda e: e.angle)
+    "BCTRL": FieldAccessor(lambda e, energy: e.angle * get_magnetic_rigidity(energy), lambda e, energy, a: setattr(e, "angle", a / get_magnetic_rigidity(energy))),
+    "BACT": FieldAccessor(lambda e, energy: e.angle * get_magnetic_rigidity(energy))
 }
 
 TRANSVERSE_DEFLECTING_CAVITY_MAPPING = {
