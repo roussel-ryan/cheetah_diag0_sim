@@ -42,7 +42,11 @@ $ cd Badger-Resources/cu_hxr
 $ badger -g -cf config.yaml
 ```
 
-Please update config.yaml with correct paths. 
+Please update config.yaml with correct paths. Choose nc_inj_emit environment. Choose process variables and use emittance_x as objective. Before pressing run, set measure_background to false. 
+
+<br/>
+<img src="Screenshot.png" alt="drawing" width="1000"/>
+<br/><br/>
 
 **Warning** Not all PVs are currently supported in the Linac Simulation Server.
 
