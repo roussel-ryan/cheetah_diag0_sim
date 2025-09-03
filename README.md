@@ -14,6 +14,7 @@ $ cd Linac-Simulation-Server/yaml_configs
 $ source /sdf/group/cds/sw/epics/users/ernesto/sandbox/ML_Physics/conda-local-activate.sh
 $ conda env create -f environment.yml
 $ conda activate linac-simulation
+$ source /afs/slac/g/lcls/tools/script/ENVS64.bash
 ```
 
 ### Run the simulated server:
@@ -30,6 +31,7 @@ Make sure you source this script before attempting to access PVs using caget/pvg
 
 ```
 $ cd Linac-Simulation-Server/
+$ source /afs/slac/g/lcls/tools/script/ENVS64.bash
 $ source epics-env.sh
 ```
 It is _not_ necessary to source epics_env.sh before running `start.sh`, as that setup is handled automatically by `start.sh`
